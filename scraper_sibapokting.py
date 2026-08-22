@@ -128,9 +128,8 @@ def scrape_range(start_date, end_date, delay_seconds=1.5, save_every=10, output_
 
 
 if __name__ == "__main__":
-    # --- Contoh pemakaian: mulai dari rentang kecil dulu untuk uji coba (1 minggu) ---
-    start = date(2026, 8, 13)
-    end = date(2026, 8, 19)
+    start = date(2024, 8, 22)
+    end = date(2026, 8, 22)
 
     df = scrape_range(start, end)
     print(df.head(20))
