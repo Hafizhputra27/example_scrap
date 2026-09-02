@@ -1,2 +1,5 @@
 __pycache__/
 *.pyc
+
+# dataset turunan per-horizon (regenerate: python3 scripts/build_dataset_horizon.py N)
+dataset_fitur_h*.csv

@@ -1,0 +1,4 @@
+horizon,mae_model,mape_model,mae_baseline,mape_baseline,selisih_pct
+1,852,2.78,644,2.2,32.3
+3,1700,5.68,1331,4.67,27.7
+7,2915,9.9,2271,7.86,28.4
