@@ -64,12 +64,12 @@ X_train, y_train = train_df[feature_cols], train_df[target_col]
 X_test, y_test = test_df[feature_cols], test_df[target_col]
 
 # --- Model LightGBM ---
-# objective L1: target (selisih harga) mayoritas persis 0 karena harga sangat lengket.
-# L2 (default) kepancing lonjakan langka lalu ngasih dorongan kecil yang salah di hari
-# stabil; L1 = persis metrik MAE, cenderung prediksi 0 kalau tidak yakin.
-# min_child_samples dinaikin biar tidak ngepas ke noise cuaca/kurs.
+# Catatan: objective L1 sempat dicoba tapi kolaps -- target selisih mayoritas persis 0,
+# L1 menemukan konstanta 0 sebagai MAE-optimal sehingga semua tree jadi nol dan model
+# identik dengan baseline persistence (tautologi, bukan hasil). L2 dipakai supaya model
+# menghasilkan prediksi non-trivial yang bisa diuji lawan baseline di tiap horizon.
+# min_child_samples dinaikin biar tidak terlalu ngepas ke noise cuaca/kurs.
 model = lgb.LGBMRegressor(
-    objective="regression_l1",
     n_estimators=500,
     learning_rate=0.05,
     num_leaves=31,
