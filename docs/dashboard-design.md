@@ -1,6 +1,7 @@
 # Design — Dashboard Harga Hasil Bumi (tema hijau)
 
 Pendamping `dashboard-PRD.md`. Semua nilai di sini final kecuali ditandai.
+**Stack:** React + Vite + **Recharts**. Warna dipass ke Recharts dari objek JS (§12); CSS `:root` (§11) untuk layout/teks/permukaan.
 
 ---
 
@@ -183,22 +184,28 @@ Muncul di 3 tempat:
 3. **Dalam tiap prediksi-chip** — mini-ribbon (sparkline) menunjukkan rentang 7-hari
    khas komoditas itu, di belakang angka model & baseline.
 
-Render: SVG. Fill = `<linearGradient>` vertikal dari `hue@8%` (tengah) → `hue@22%`
-(tepi). Median = `--signature` (lime) stroke 1.5px, `stroke-linecap: round`. Pita
-Lebaran dapat `<pattern>` hatch 45° 1px `--ink-muted@30%` DI ATAS fill (pembeda
-non-hue untuk CVD/cetak).
+**Implementasi Recharts:** `<AreaChart>` dengan dua `<Area>`:
+- band p10→p90: satu `<Area dataKey="p90" baseValue={p10-per-titik}>` — atau lebih andal,
+  transform data jadi `{x, low, high}` dan pakai `<Area dataKey="high" />` + `<Area dataKey="low" fill="var(--bg)" />` (teknik "area range" Recharts), fill via `<defs><linearGradient>` vertikal `hue@8%` (tengah) → `hue@22%` (tepi).
+- median: `<Line dataKey="median" stroke={token.signature} strokeWidth={1.5} dot={false} strokeLinecap="round" />`.
+- Pita Lebaran: tambah `<defs><pattern id="hatch">` garis 45° 1px `--ink-muted@30%`, set `fill="url(#hatch)"` pada `<Area>` kedua DI ATAS gradient (pembeda non-hue untuk CVD/cetak).
+- Penanda 2 tanggal Lebaran: `<ReferenceLine x={...} stroke="var(--line)" strokeDasharray="2 4" label="Lebaran" />`.
 
-## 6. Risiko estetika — garis "tulis tangan"
+Mini-ribbon di `PrediksiChip`: `<AreaChart>` kecil tanpa sumbu (`<XAxis hide>`, dst), `isAnimationActive={false}`, di-`position:absolute` sebagai background kartu, opacity 0.5.
 
-Sumbu, tepi pita, dan garis median digambar dengan **tremor 0.5px tak beraturan**
-(SVG `<filter>` `feTurbulence` + `feDisplacementMap`, `baseFrequency ~0.012`,
-`scale 1.2`). Garis median lebar bervariasi halus. Menandakan: data ini dicatat
-tangan oleh petugas pasar, bukan sensor — dan tak ada di sini yang presisi-mesin.
+## 6. Risiko estetika — garis "tulis tangan" (OPSIONAL)
 
-Fallback WAJIB:
-- `@media (prefers-reduced-motion: reduce)` → filter mati, garis bersih.
-- `@media (prefers-reduced-transparency: reduce)` → fill pita jadi solid 20%, no gradient.
-- `@media (forced-colors: active)` → semua filter mati, pakai `CanvasText`/`Canvas`.
+Recharts menggenerate `<path>` sendiri, jadi tremor per-garis susah. Pendekatan yang
+masih mungkin: **SVG `<filter>` di container chart** (`feTurbulence` + `feDisplacementMap`,
+`baseFrequency 0.012`, `scale 1.1`) diterapkan ke seluruh `<svg>` Recharts lewat CSS
+`filter: url(#tulis-tangan)` pada wrapper. Efeknya menyeluruh (semua garis + teks
+bergetar halus) — menandakan data dicatat tangan petugas pasar, bukan sensor.
+
+**Ini opsional.** Kalau bikin teks tick jadi susah dibaca atau ribet, **lewati** —
+signature (§5) sudah cukup jadi pembeda. Kalau dipakai:
+- `@media (prefers-reduced-motion: reduce)` → filter dilepas (`filter: none`).
+- `@media (prefers-reduced-transparency: reduce)` → fill pita jadi solid 20%.
+- `@media (forced-colors: active)` → filter dilepas, warna token → `Canvas`/`CanvasText`.
 
 Semua elemen lain: disiplin, bersih, tanpa dekorasi.
 
@@ -227,31 +234,33 @@ Tidak ada: parallax, auto-carousel, animasi loop, angka berkedip.
 | **tabel-view** | `<table>` dalam `<details>`; header `--surface-2`, angka `tabular-nums` rata kanan, baris selang-seling `--surface-2` |
 | **banner kejujuran** | di section Prediksi: bar `--surface-2` border-left 3px `--brand`, teks: "Prediksi dihitung dari data terakhir <tanggal>. Model ML secara historis kurang akurat dari baseline — ditampilkan sebagai pembanding." |
 
-## 9. Spesifikasi chart (dari skill dataviz)
+## 9. Spesifikasi chart (dari skill dataviz) — dengan Recharts
 
-- **Marks:** garis 2px; ujung data bar radius 4px menempel baseline; marker ≥ 8px;
-  gap permukaan 2px antar-fill; grid & sumbu recessive (`--line`, 1px).
-- **Legend:** selalu ada untuk ≥ 2 seri (1 seri → judul saja). ≤ 4 seri juga
-  diberi label langsung. Teks legend/label pakai token teks, BUKAN warna seri.
-- **Hover:** default menyala. Line/area → crosshair + tooltip. Bar/dot → tooltip per-mark.
-  Hit target > mark. Filter satu baris di atas chart (= sub-bar global).
-- **Satu sumbu.** Curah hujan & suhu = DUA chart terpisah, jangan dual-axis.
-- **Tabel:** setiap chart punya `<details>` tabel.
-- **Dark mode:** langkah warna dark sudah divalidasi (§3), bukan flip otomatis.
+Prinsip (tetap):
+- **Marks:** `<Line strokeWidth={2} dot={false}>`; bar `radius={[4,4,0,0]}`; grid & sumbu recessive (`<CartesianGrid stroke="var(--line)" />`, `<XAxis tick={{fill:'var(--ink-muted)',fontFamily:'var(--font-mono)',fontSize:11}} />`).
+- **Legend:** `<Legend>` untuk ≥ 2 seri (1 seri → judul `<figcaption>` saja). Label seri pakai token teks, BUKAN warna seri. `formatter` untuk nama Indonesia.
+- **Hover:** `<Tooltip>` kustom (komponen sendiri, gaya token). Line/area → aktif default (crosshair via `<Tooltip cursor>`).
+- **Satu sumbu.** Curah hujan & suhu = DUA `<BarChart>`/`<ComposedChart>` terpisah. JANGAN `yAxisId` ganda untuk skala beda.
+- **Tabel:** tiap `ChartFrame` membungkus `<TabelView>` dalam `<details>`.
+- **Animasi:** `isAnimationActive={!prefersReducedMotion}` di semua seri.
+- **Dark mode:** warna dari `tokens.js` (§12) yang membaca tema aktif, bukan flip otomatis.
+- **Responsif:** semua chart dalam `<ResponsiveContainer width="100%" height={340}>`.
 
-Per chart:
+Per chart (komponen → Recharts):
 
-| Chart | Form | Catatan |
+| Komponen | Recharts | Catatan |
 |---|---|---|
-| Hero ribbon | line + band | 2 thn, median + pita p10–p90, penanda vertikal di 2 tanggal Lebaran |
-| Eksplorasi harga | line + envelope | default: area min–max 9 pasar (`--line` fill) + garis rata-rata (`--ink`); spotlight 1 pasar → garis biru (slot 1) 2.5px, envelope jadi abu |
-| Curah hujan | bar harian | 1 hue, baseline 0, radius 4px ujung |
-| Suhu | line + pita | avg (garis) + min–max (pita 12%) |
-| Kurs | line | 1 seri `--brand`, no legend |
-| Backtest prediksi | 3 line | aktual/model/baseline (§3), 60 hari, MAE sebagai teks di caption |
-| MAE per horizon | grouped bar | model (amber) vs baseline (muted), label `+X%` di atas bar model |
-| Band per komoditas | dot + range | 25 baris (komoditas di y), titik median + garis p10–p90, normal vs Lebaran (2 warna, offset vertikal) |
-| Kalkulator band | band tunggal + penanda | input harga → pita nilai absolut + penanda p10/median/p90 |
+| `PitaKetidakpastian` | `AreaChart` + `Area`×2 + `Line` + `ReferenceLine` | signature §5; data `{x, p10, median, p90}` |
+| `HargaChart` | `ComposedChart`: `Area` (envelope min–max 9 pasar, fill `--line`) + `Line` rata-rata (`--ink`) + `Line` spotlight (cat-1, 2.5px) | spotlight = pasar terpilih dari FilterContext |
+| `CurahHujanChart` | `BarChart` + `Bar` (fill `token.rain`, radius `[4,4,0,0]`) | 1 hue, harian |
+| `SuhuChart` | `ComposedChart`: `Area` (min–max, fill `token.temp`@12%) + `Line` (avg) | |
+| `KursChart` | `LineChart` + `Line` (`--brand`) | 1 seri, tanpa `<Legend>` |
+| `BacktestChart` | `LineChart` + `Line`×3 | `aktual` (`--ink`, 2.5px) · `model` (cat-3 amber, 2px) · `baseline` (`--ink-muted`, 2px, `strokeDasharray="4 2"`). MAE di `<figcaption>`. |
+| `MaeHorizonChart` | `BarChart` + `Bar`×2 (`barGap`) | model (amber) vs baseline (`--ink-muted`); `<LabelList>` `+X%` di bar model |
+| `BandKomoditasChart` | `ComposedChart` layout `vertical` | y = 25 komoditas; `ErrorBar` atau `Line` horizontal p10–p90 + `Scatter` median; normal vs Lebaran offset |
+| Kalkulator band | `AreaChart` kecil + `ReferenceLine`×3 | input harga → rentang absolut + penanda p10/median/p90 |
+
+Gap permukaan 2px antar-fill: set `stroke="var(--surface)"` `strokeWidth={2}` pada `<Bar>` yang bersebelahan / bertumpuk.
 
 ## 10. Aksesibilitas — lantai kualitas
 
@@ -298,3 +307,36 @@ Per chart:
 }
 body { background: var(--bg); color: var(--ink); font-family: var(--font-body); }
 ```
+
+## 12. `tokens.js` — warna untuk props Recharts
+
+Recharts butuh warna sebagai string di props (bukan `var(--x)` yang tidak selalu
+resolve di `<svg>` atribut). Baca tema aktif, kembalikan hex.
+
+```js
+const LIGHT = {
+  ink:'#1A241A', inkMuted:'#57634F', line:'#D7DFC9', surface:'#FFFFFF', bg:'#F4F7EF',
+  brand:'#2C6E49', signature:'#8AB84F',
+  cat1:'#0072B2', cat2:'#009E73', cat3:'#E69F00',
+  naik:'#2C7A4B', turun:'#B5502F', stabil:'#7B8470',
+  rain:'#3C7A9E', temp:'#C46A3C',
+};
+const DARK = {
+  ink:'#E9EEE0', inkMuted:'#9AA88C', line:'#2E3826', surface:'#181E13', bg:'#10140D',
+  brand:'#69B487', signature:'#A6D26A',
+  cat1:'#3C97D4', cat2:'#12A97F', cat3:'#B27B27',
+  naik:'#69B487', turun:'#D9805E', stabil:'#8C9580',
+  rain:'#5FA0C4', temp:'#D98C5E',
+};
+export const getTokens = (theme) => (theme === 'dark' ? DARK : LIGHT);
+```
+
+Pakai lewat hook: `const t = useTokens()` (baca ThemeContext) → `<Line stroke={t.cat3} />`.
+Chart harus re-render saat tema berubah (theme di dependency / key).
+
+## 13. Yang berubah dari draft vanilla
+
+- Chart: inline-SVG buatan sendiri → **Recharts** (§9, §12).
+- "Tanpa build tooling / nol dependency" → **Vite + react + react-dom + recharts**.
+- Signature tetap (pita ketidakpastian). Risiko "garis tulis tangan" → **opsional** (§6).
+- Deploy: drag-drop → `npm run build` lalu deploy `dist/`.

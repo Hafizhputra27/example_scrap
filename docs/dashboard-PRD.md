@@ -5,6 +5,7 @@
 **Pemilik:** Hafizh (skripsi — prediksi harga sayur)
 **Repo data (sumber):** `example_scrap` → menghasilkan `dashboard_data/*.json`
 **Repo dashboard:** **project terpisah** (mis. `~/Documents/GitHub/dashboard-harga-sayur/`), tidak disatukan dengan repo data.
+**Stack:** React 18 + Vite + Recharts. Tanpa backend (data = file JSON statis; semua filter/kalkulasi di browser). Deploy statis.
 
 ---
 
@@ -103,49 +104,65 @@ Satu halaman scroll dengan navigasi anchor. Section:
 
 | Aspek | Target |
 |---|---|
-| Hosting | File statis. Bisa dibuka `file://` atau di-serve (`python3 -m http.server`), atau deploy ke GitHub Pages / Netlify (drag-drop). |
-| Build tooling | **Tidak ada.** ES modules native, `<script type="module">`. Tidak ada npm/bundler. |
-| Dependency | **Nol runtime dependency.** Chart = inline SVG buatan sendiri (helper module). Font = Google Fonts (diizinkan) dengan fallback stack. |
-| Ukuran load awal | < 1,5 MB (JSON) + < 100 KB kode. `harga.json` & `backtest.json` di-fetch lazy saat section-nya terlihat. |
-| Responsif | Mobile → desktop. Chart scroll horizontal dalam container sendiri kalau sempit; body tidak pernah scroll horizontal. |
-| Aksesibilitas | Fokus keyboard terlihat; `prefers-reduced-motion` dihormati; setiap chart punya alternatif tabel; identitas seri tidak hanya lewat warna (legend + label langsung). |
-| Tema | Light + dark, mengikuti `prefers-color-scheme` + toggle manual. Hijau (lihat design doc). |
-| Bahasa | Indonesia. |
+| Stack | React 18 + Vite. Chart: **Recharts** (MIT). Font: Google Fonts (diizinkan) + fallback stack. |
+| Backend | **Tidak ada.** Data = `public/data/*.json` (salinan dari pipeline). Semua filter & kalkulasi (kalkulator band) di browser. |
+| Hosting | Statis. `npm run build` → deploy folder `dist/` ke GitHub Pages / Netlify / Vercel. |
+| Dependency runtime | `react`, `react-dom`, `recharts`. Tidak lebih. |
+| Ukuran | Bundle JS < ~250 KB gzip. `harga.json` (920 KB) & `backtest.json` (360 KB) di-`fetch` lazy saat section pertama kali terlihat (IntersectionObserver / route), tidak di bundle. |
+| Responsif | Mobile → desktop. Chart pakai `<ResponsiveContainer>`; wrapper `overflow-x:auto` kalau perlu; body tidak pernah scroll horizontal. |
+| Aksesibilitas | Fokus keyboard terlihat; `prefers-reduced-motion` dihormati (Recharts `isAnimationActive={!reduced}`); setiap chart punya alternatif tabel; identitas seri tidak hanya lewat warna (legend + label langsung). |
+| Tema | Light + dark, `prefers-color-scheme` + toggle manual (class di `<html>`). Hijau (lihat design doc). Warna chart di-pass ke Recharts dari objek token JS (design doc §12). |
+| State | Filter global (komoditas/pasar/rentang/tema) di React Context atau URL search params. Tidak perlu Redux/Zustand. |
+| Bahasa | Indonesia. `<html lang="id">`. |
 | Browser | Evergreen (Chrome/Firefox/Safari terbaru). |
 
-## 7. Struktur project dashboard (usulan)
+## 7. Struktur project dashboard
 
 ```
 dashboard-harga-sayur/
 ├── index.html
-├── style.css
-├── data/                     # salinan dashboard_data/*.json dari repo data
+├── package.json               # react, react-dom, recharts + vite (dev)
+├── vite.config.js             # base: '/<nama-repo>/' kalau GitHub Pages
+├── public/
+│   └── data/*.json            # salinan dashboard_data/ dari repo pipeline
 ├── src/
-│   ├── main.js                # bootstrap, routing anchor, lazy-load section
-│   ├── store.js               # fetch + cache JSON, helper tanggal (offset → Date)
-│   ├── chart/
-│   │   ├── svg.js             # primitif: skala, sumbu, path, crosshair, tooltip
-│   │   ├── line.js            # line + pita (band/envelope)
-│   │   ├── bars.js            # bar (curah hujan, MAE)
-│   │   └── band.js            # band p10–p90 (signature)
+│   ├── main.jsx
+│   ├── App.jsx                # layout, header, sub-bar, nav anchor, section
+│   ├── styles.css             # token :root + global (design doc §11)
+│   ├── tokens.js              # objek warna JS untuk props Recharts (design doc §12)
+│   ├── store/
+│   │   ├── DataContext.jsx    # fetch + cache JSON, lazy per file
+│   │   ├── FilterContext.jsx  # komoditas/pasar/rentang aktif
+│   │   └── dates.js           # offset hari → Date, format tanggal id-ID
 │   ├── sections/
-│   │   ├── hero.js
-│   │   ├── harga.js
-│   │   ├── cuaca-kurs.js
-│   │   ├── prediksi.js
-│   │   ├── rekomendasi.js
-│   │   └── riset.js
+│   │   ├── Hero.jsx
+│   │   ├── EksplorasiHarga.jsx
+│   │   ├── CuacaKurs.jsx
+│   │   ├── PrediksiModel.jsx
+│   │   ├── RekomendasiBand.jsx
+│   │   └── RingkasanRiset.jsx
+│   ├── charts/
+│   │   ├── ChartFrame.jsx     # <figure> + panel + <figcaption> + <TabelView>
+│   │   ├── PitaKetidakpastian.jsx   # signature: AreaChart p10–p90 (design doc §5)
+│   │   ├── HargaChart.jsx     # envelope 9 pasar + spotlight
+│   │   ├── BacktestChart.jsx  # aktual/model/baseline
+│   │   ├── CurahHujanChart.jsx / SuhuChart.jsx / KursChart.jsx
+│   │   ├── MaeHorizonChart.jsx
+│   │   └── BandKomoditasChart.jsx
 │   └── components/
-│       ├── prediksi-chip.js   # kartu berpasangan model|baseline
-│       ├── tabel-view.js      # alternatif tabel untuk tiap chart
-│       └── selector.js        # pemilih komoditas/pasar/rentang
-├── docs/                      # PRD + design (dari sini)
+│       ├── PrediksiChip.jsx   # kartu berpasangan model|baseline + mini-ribbon
+│       ├── TabelView.jsx      # <details> tabel alternatif tiap chart
+│       ├── Selector.jsx       # pemilih komoditas/pasar/rentang
+│       ├── BadgeCaveat.jsx
+│       ├── BannerKejujuran.jsx
+│       └── ThemeToggle.jsx
+├── docs/                      # PRD + design (salin dari repo pipeline)
 └── README.md
 ```
 
 ## 8. Di luar scope
 
-- Backend / database / API.
+- Backend / database / API (Express, dsb). Tidak ada tugas backend — data statis, filter di client. Backend baru relevan di aplikasi tahun depan (user accounts, notifikasi, trigger scraping).
 - Auto-scraping & auto-refresh (dirancang agar bisa ditambahkan; tidak dibangun).
 - Autentikasi, multi-user, komentar.
 - Prediksi > H+7 atau > 3 hari ke depan real-time.
@@ -155,16 +172,17 @@ dashboard-harga-sayur/
 
 ## 9. Tahapan implementasi
 
-1. **Kerangka** — `index.html`, `style.css` (token dari design doc), `store.js`, navigasi anchor, dark/light toggle.
-2. **Modul chart SVG** — `svg.js` primitif + `line.js` (paling banyak dipakai). Uji dengan `kurs.json` (paling sederhana).
-3. **Section Eksplorasi Harga** — selector + line/envelope + tabel-view. Ini section terbesar; kalau pola ini beres, sisanya mengikuti.
-4. **Section Hero** — pita ketidakpastian (reuse `band.js`).
-5. **Section Cuaca & Kurs** — `bars.js` + line.
-6. **Section Prediksi** — backtest chart + `prediksi-chip` + bar MAE.
-7. **Section Rekomendasi** — band viz + kalkulator + lebar-band chart.
-8. **Section Ringkasan Riset** — sebagian besar teks + 1 tabel.
-9. **Pass aksesibilitas & responsif** — tabel-view semua chart, fokus, reduced-motion, uji mobile.
-10. **Deploy** — GitHub Pages / Netlify.
+1. **Scaffold** — `npm create vite@latest` (react), pasang `recharts`. `styles.css` + `tokens.js` dari design doc. `DataContext` + `FilterContext`. `dates.js`.
+2. **Kerangka `App.jsx`** — header sticky, sub-bar kontrol (Selector), nav anchor, ThemeToggle. Placeholder 6 section.
+3. **`ChartFrame` + `KursChart`** — pola paling sederhana (1 seri, `kurs.json`). Tetapkan pola `<figure>` + `<TabelView>` + `<ResponsiveContainer>` di sini.
+4. **Section Eksplorasi Harga** — `HargaChart` (envelope 9 pasar + spotlight), reaksi ke FilterContext. Section terbesar; polanya jadi template.
+5. **Section Hero** — `PitaKetidakpastian` (signature). Reuse di section Band nanti.
+6. **Section Cuaca & Kurs** — `CurahHujanChart`, `SuhuChart` (dua chart terpisah), `KursChart`.
+7. **Section Prediksi Model** — `BacktestChart`, `PrediksiChip` grid, `BannerKejujuran`, `MaeHorizonChart`.
+8. **Section Rekomendasi Band** — `PitaKetidakpastian` normal vs Lebaran, kalkulator (fungsi murni port dari `rekomendasi_band_h7.py`), `BandKomoditasChart`.
+9. **Section Ringkasan Riset** — teks dari `riset.json` + 1 tabel.
+10. **Pass aksesibilitas & responsif** — `TabelView` semua chart, `:focus-visible`, reduced-motion, uji 360px.
+11. **Deploy** — `vite.config.js` base path, `npm run build`, GitHub Pages / Netlify.
 
 ## 10. Kriteria selesai (Definition of Done)
 
@@ -175,4 +193,5 @@ dashboard-harga-sayur/
 - [ ] Setiap chart punya alternatif tabel + legend/label (bukan warna-saja).
 - [ ] Light & dark tema; `prefers-reduced-motion` dihormati.
 - [ ] Responsif 360px → desktop; body tidak scroll horizontal.
-- [ ] Bisa dibuka tanpa server (atau dengan `http.server`), tanpa build step.
+- [ ] `npm run build` sukses; `dist/` bisa di-deploy statis; tidak ada dependency selain react/react-dom/recharts.
+- [ ] Tidak ada backend / API call ke server manapun (hanya `fetch` file JSON lokal).
