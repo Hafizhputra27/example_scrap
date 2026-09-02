@@ -7,13 +7,16 @@ Cuma update di hari kerja pasar finansial -- weekend/libur diisi
 lewat forward-fill (pakai nilai hari kerja terakhir).
 """
 
+from pathlib import Path
+
 import requests
 import pandas as pd
 
 BASE_URL = "https://api.frankfurter.dev/v1"
+PROCESSED = Path(__file__).resolve().parent.parent / "data" / "processed"
 
 
-def fetch_kurs_range(start_date, end_date, output_path="kurs_usd_idr.csv"):
+def fetch_kurs_range(start_date, end_date, output_path=PROCESSED / "kurs_usd_idr.csv"):
     """Ambil kurs USD/IDR untuk satu rentang tanggal sekaligus (satu request)."""
     url = f"{BASE_URL}/{start_date}..{end_date}"
     params = {"from": "USD", "to": "IDR"}

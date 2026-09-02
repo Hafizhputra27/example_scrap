@@ -10,11 +10,15 @@ Hasil akhir: jumlah baris tetap sama seperti harga (98.685), tapi sekarang
 setiap baris punya kolom tambahan curah hujan, suhu, dan kurs.
 """
 
+from pathlib import Path
+
 import pandas as pd
 
-harga = pd.read_csv("harga_sayur_bersih.csv", parse_dates=["tanggal"])
-cuaca = pd.read_csv("cuaca_9_pasar.csv", parse_dates=["tanggal"])
-kurs = pd.read_csv("kurs_usd_idr.csv", parse_dates=["tanggal"])
+PROCESSED = Path(__file__).resolve().parent.parent / "data" / "processed"
+
+harga = pd.read_csv(PROCESSED / "harga_sayur_bersih.csv", parse_dates=["tanggal"])
+cuaca = pd.read_csv(PROCESSED / "cuaca_9_pasar.csv", parse_dates=["tanggal"])
+kurs = pd.read_csv(PROCESSED / "kurs_usd_idr.csv", parse_dates=["tanggal"])
 
 print("Ukuran sebelum digabung:")
 print("  harga:", harga.shape)
@@ -35,7 +39,7 @@ print("(harusnya baris sama dengan data harga -- 98685)")
 print("\nCek data kosong per kolom:")
 print(df.isna().sum())
 
-output_path = "dataset_gabungan.csv"
+output_path = PROCESSED / "dataset_gabungan.csv"
 df.to_csv(output_path, index=False)
 print(f"\nDisimpan ke {output_path}")
 print()

@@ -18,9 +18,11 @@ import html as html_module
 import pandas as pd
 from io import StringIO
 from datetime import date, timedelta
+from pathlib import Path
 import time
 
 BASE_URL = "https://sibapokting.bandungkab.go.id"
+RAW = Path(__file__).resolve().parent.parent / "data" / "raw"
 
 session = requests.Session()
 session.headers.update({
@@ -92,7 +94,7 @@ def parse_table(html_table, tanggal_str):
     return df_long[["tanggal", "pasar", "komoditas", "harga"]]
 
 
-def scrape_range(start_date, end_date, delay_seconds=1.5, save_every=10, output_path="harga_sibapokting.csv"):
+def scrape_range(start_date, end_date, delay_seconds=1.5, save_every=10, output_path=RAW / "harga_sibapokting.csv"):
     """Scrape rentang tanggal, simpan progresif biar aman kalau terputus di tengah jalan."""
     csrf_token, snapshot = get_initial_state()
 

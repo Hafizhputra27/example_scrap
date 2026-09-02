@@ -1,8 +1,12 @@
+from pathlib import Path
+
 import pandas as pd
 from scraper_sibapokting import get_initial_state, fetch_harga_by_date, parse_table
 
+ROOT = Path(__file__).resolve().parent.parent
+
 # --- Bagian 1: validasi CSV hasil scraping ---
-df = pd.read_csv("harga_sibapokting.csv")
+df = pd.read_csv(ROOT / "data/raw/harga_sibapokting.csv")
 
 print("Jumlah pasar unik:", df["pasar"].nunique())          # harusnya 9
 print("Jumlah komoditas unik:", df["komoditas"].nunique())  # harusnya 87

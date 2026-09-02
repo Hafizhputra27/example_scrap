@@ -7,9 +7,13 @@ Kelembaban (humidity) tidak tersedia sebagai agregat harian di Open-Meteo,
 jadi belum dimasukkan di sini -- bisa ditambah nanti lewat data per jam kalau perlu.
 """
 
+from pathlib import Path
+import time
+
 import requests
 import pandas as pd
-import time
+
+PROCESSED = Path(__file__).resolve().parent.parent / "data" / "processed"
 
 PASAR_KOORDINAT = {
     "Pasar Margahayu": (-6.975223, 107.561626),
@@ -52,7 +56,7 @@ def fetch_weather_for_pasar(nama_pasar, lat, lon, start_date, end_date):
     return df[["tanggal", "pasar", "curah_hujan_mm", "suhu_avg", "suhu_max", "suhu_min"]]
 
 
-def fetch_all_pasar(start_date, end_date, output_path="cuaca_9_pasar.csv"):
+def fetch_all_pasar(start_date, end_date, output_path=PROCESSED / "cuaca_9_pasar.csv"):
     """Loop semua 9 pasar, gabungkan jadi satu CSV."""
     all_data = []
     for i, (nama_pasar, (lat, lon)) in enumerate(PASAR_KOORDINAT.items(), start=1):
