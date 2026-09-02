@@ -6,12 +6,28 @@ ROOT = Path(__file__).resolve().parent.parent
 
 df = pd.read_csv(ROOT / "data/raw/harga_sibapokting.csv")
 
+# 25 komoditas hasil bumi (sayur, buah, umbi, kacang) dengan data kosong <= 25%
+# rata-rata DAN minimal ~6 dari 9 pasar terisi baik. Dari 87 komoditas SIBAPOKTING:
+# non-pangan-segar (beras, daging, telur, ikan, sembako) di luar cakupan; sayuran daun
+# (bayam, kangkung, sawi, pakcoy, timun) dibuang karena data kosong ~69%.
+# Catatan: bawang merah batu / sayuran kentang lokal / kacang tanah kupas punya 1-3 pasar
+# yang jarang lapor -> sel pasar x komoditas itu akan kosong (ditangani sebagai NaN).
 sayuran_inti = [
+    # bawang / allium
     "BAWANG DAUN", "BAWANG MERAH", "BAWANG PUTIH BIASA",
+    "BAWANG SUMENEP", "BAWANG BOMBAY", "BAWANG MERAH BATU",
+    # cabai
     "CABE MERAH TANJUNG", "CABE MERAH KERITING", "CABE HIJAU BIASA",
-    "CABE RAWIT HIJAU", "CABE RAWIT MERAH", "JAGUNG MANIS",
-    "SAYURAN BUNCIS", "SAYURAN TOMAT", "SAYURAN KOL/KUBIS",
-    "KENTANG DIENG", "SAYURAN WORTEL", "TOMAT HIJAU",
+    "CABE RAWIT HIJAU", "CABE RAWIT MERAH",
+    # sayuran buah / polong
+    "SAYURAN BUNCIS", "SAYURAN TOMAT", "SAYURAN KOL/KUBIS", "SAYURAN WORTEL",
+    "TOMAT HIJAU", "JAGUNG MANIS",
+    # umbi
+    "KENTANG DIENG", "SAYURAN KENTANG LOKAL", "KETELA POHON", "UBI JALAR PUTIH",
+    # kacang
+    "KACANG HIJAU", "KACANG TANAH KUPAS",
+    # buah
+    "JERUK", "PISANG",
 ]
 
 df_clean = df[df["komoditas"].isin(sayuran_inti)].copy()

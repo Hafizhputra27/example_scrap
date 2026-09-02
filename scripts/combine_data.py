@@ -6,8 +6,9 @@ Logika join:
 - cuaca (tanggal, pasar, ...) <- join by [tanggal, pasar], karena cuaca sama untuk semua komoditas di pasar yang sama
 - kurs (tanggal, ...) <- join by [tanggal] saja, karena kurs sama untuk semua pasar & komoditas
 
-Hasil akhir: jumlah baris tetap sama seperti harga (98.685), tapi sekarang
-setiap baris punya kolom tambahan curah hujan, suhu, dan kurs.
+Hasil akhir: jumlah baris tetap sama seperti data harga (731 hari x 9 pasar x
+25 komoditas = 164.475), tapi sekarang setiap baris punya kolom tambahan
+curah hujan, suhu, dan kurs.
 """
 
 from pathlib import Path
@@ -34,7 +35,7 @@ df = df.merge(kurs, on="tanggal", how="left")
 df = df.sort_values(["tanggal", "pasar", "komoditas"]).reset_index(drop=True)
 
 print("\nUkuran setelah digabung:", df.shape)
-print("(harusnya baris sama dengan data harga -- 98685)")
+print(f"(harusnya baris sama dengan data harga -- {len(harga)})")
 
 print("\nCek data kosong per kolom:")
 print(df.isna().sum())
