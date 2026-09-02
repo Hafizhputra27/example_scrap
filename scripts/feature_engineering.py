@@ -49,6 +49,16 @@ df["hari_dalam_minggu"] = df["tanggal"].dt.dayofweek  # 0=Senin, 6=Minggu
 df["bulan"] = df["tanggal"].dt.month
 df["is_weekend"] = df["hari_dalam_minggu"].isin([5, 6]).astype(int)
 
+# Jarak (hari) ke Lebaran terdekat: negatif = sebelum, positif = sesudah.
+# "bulan" tidak cukup karena Lebaran ikut kalender lunar (geser ~11 hari/tahun).
+# ponytail: hardcode tanggal Idul Fitri versi pemerintah -- update daftar ini kalau
+# rentang data diperluas. Hanya 2 momen dalam data 2024-08..2026-08, jadi sinyal
+# musiman apa pun dari sini = temuan awal, bukan kesimpulan kuat.
+_lebaran = pd.to_datetime(["2025-03-31", "2026-03-21"])
+df["hari_ke_lebaran"] = df["tanggal"].apply(
+    lambda t: min(((t - l).days for l in _lebaran), key=abs)
+)
+
 # --- 4. Curah hujan kumulatif (per pasar, bukan per komoditas -- cuaca sama untuk semua sayur) ---
 df["curah_hujan_7hr"] = df.groupby("pasar")["curah_hujan_mm"].transform(
     lambda x: x.rolling(window=7, min_periods=1).sum()

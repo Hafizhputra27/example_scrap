@@ -49,6 +49,7 @@ feature_cols = [
     "curah_hujan_7hr", "curah_hujan_14hr",
     "kurs_usd_idr", "kurs_lag7",
     "hari_dalam_minggu", "bulan", "is_weekend",
+    "hari_ke_lebaran",
 ]
 target_col = "target_delta"
 
