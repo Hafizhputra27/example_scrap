@@ -39,6 +39,7 @@ feature_cols = [
     "curah_hujan_7hr", "curah_hujan_14hr",
     "kurs_usd_idr", "kurs_lag7",
     "hari_dalam_minggu", "bulan", "is_weekend",
+    "hari_ke_lebaran",  # WAJIB sinkron dengan feature_cols di train_model_h1.py
 ]
 
 model = lgb.Booster(model_file=str(MODELS_DIR / "model_h1.txt"))
