@@ -21,7 +21,7 @@ def fetch_kurs_range(start_date, end_date, output_path=PROCESSED / "kurs_usd_idr
     url = f"{BASE_URL}/{start_date}..{end_date}"
     params = {"from": "USD", "to": "IDR"}
 
-    resp = requests.get(url, params=params)
+    resp = requests.get(url, params=params, timeout=(10, 90))
     resp.raise_for_status()
     data = resp.json()
 

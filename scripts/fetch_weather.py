@@ -40,7 +40,7 @@ def fetch_weather_for_pasar(nama_pasar, lat, lon, start_date, end_date):
         "daily": "precipitation_sum,temperature_2m_mean,temperature_2m_max,temperature_2m_min",
         "timezone": "Asia/Jakarta",
     }
-    resp = requests.get(BASE_URL, params=params)
+    resp = requests.get(BASE_URL, params=params, timeout=(10, 90))
     resp.raise_for_status()
     data = resp.json()
 
