@@ -1,0 +1,74 @@
+name: refresh mingguan (latih ulang model)
+
+on:
+  schedule:
+    # 22:00 UTC Sabtu  ->  05:00 WIB Minggu
+    - cron: "0 22 * * 6"
+  workflow_dispatch:
+
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  refresh-full:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      TZ: Asia/Jakarta
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Refresh sumber data (scrape harga Δ + fetch cuaca & kurs)
+        run: python scripts/refresh_sumber_data.py
+
+      - name: Jalankan pipeline PENUH (latih ulang semua model)
+        run: bash run_pipeline.sh
+
+      - name: Sanity check — data dashboard tidak basi
+        run: |
+          python - <<'PY'
+          import json, sys, datetime as dt
+          m = json.load(open("dashboard_data/meta.json"))
+          terakhir = dt.date.fromisoformat(m["tanggal_data_terakhir"])
+          umur = (dt.date.today() - terakhir).days
+          print(f"tanggal_data_terakhir={terakhir}  umur={umur} hari")
+          if umur > 8:
+              sys.exit(f"ABORT: data dashboard basi ({umur} hari)")
+          PY
+
+      - name: Commit hasil ke example_scrap (termasuk models/*.txt)
+        run: |
+          git config user.name  "pipeline-bot"
+          git config user.email "pipeline-bot@users.noreply.github.com"
+          git add data models dashboard_data
+          git diff --cached --quiet || git commit -m "data+model: refresh mingguan $(date -u +%F)"
+          git push
+
+      - name: Push 8 JSON ke patani-dashboard
+        env:
+          TOKEN: ${{ secrets.DASHBOARD_PUSH_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::secret DASHBOARD_PUSH_TOKEN belum diset — lihat docs/auto-refresh.md"
+            exit 1
+          fi
+          git clone --depth 1 "https://x-access-token:${TOKEN}@github.com/Hafizhputra27/patani-dashboard" dash
+          cp dashboard_data/*.json dash/public/data/
+          cd dash
+          git config user.name  "pipeline-bot"
+          git config user.email "pipeline-bot@users.noreply.github.com"
+          git add public/data
+          git diff --cached --quiet && { echo "tidak ada perubahan JSON — skip"; exit 0; }
+          git commit -m "data: refresh $(date -u +%F) (auto, mingguan)"
+          git push
