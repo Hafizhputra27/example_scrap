@@ -2,10 +2,8 @@ name: refresh mingguan (latih ulang model)
 
 on:
   workflow_dispatch:
-  # Aktifkan cron SETELAH secret DASHBOARD_PUSH_TOKEN diset & 1x "Run workflow" sukses.
-  # Hapus tanda # di 2 baris di bawah:
-  # schedule:
-  #   - cron: "0 22 * * 6"   # 22:00 UTC Sabtu = 05:00 WIB Minggu
+  schedule:
+    - cron: "0 22 * * 6"   # 22:00 UTC Sabtu = 05:00 WIB Minggu
 
 concurrency:
   group: refresh

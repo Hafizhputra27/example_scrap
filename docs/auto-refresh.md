@@ -35,7 +35,18 @@ cron harian 06:00 WIB (Sen–Sab)          cron mingguan 05:00 WIB (Minggu)
 
 `concurrency.group: refresh` → harian & mingguan tidak pernah jalan bersamaan.
 
-## Setup (manual, sekali)
+## Status: AKTIF
+
+Cron sudah aktif (harian 06:00 WIB Sen–Sab, mingguan 05:00 WIB Minggu). Secret
+`DASHBOARD_PUSH_TOKEN` sudah diset. Diuji manual 4× (2026-09-03), semua hijau —
+live site update dari `22 Agu` → `3 Sep`, 9/9 pasar cuaca.
+
+Runtime aktual (mode `--cepat`, delta 1 hari): refresh ~7 dtk · pipeline ~75 dtk ·
+total < 3 menit. Backfill penuh (pasar cuaca hilang) menambah ~1 menit.
+
+---
+
+## Setup (sudah dilakukan — untuk referensi bila pindah repo)
 
 1. **Fine-grained PAT** — github.com/settings/tokens?type=beta → Generate new token
    - Resource owner: `Hafizhputra27`
@@ -49,8 +60,7 @@ cron harian 06:00 WIB (Sen–Sab)          cron mingguan 05:00 WIB (Minggu)
    - langkah "Refresh sumber data" sukses (berapa baris baru)
    - `run_pipeline.sh --cepat` sukses, catat **durasi** (untuk kalibrasi timeout)
    - commit muncul di `patani-dashboard` → Vercel deploy → situs `Data s/d <tanggal baru>`
-5. **Aktifkan cron:** setelah run manual sukses, edit kedua `.github/workflows/refresh-*.yml`
-   — hapus tanda `#` pada blok `schedule:` / `cron:` (lihat komentar di file), commit.
+5. **Aktifkan cron:** hapus komentar pada blok `schedule:` di kedua workflow (SUDAH).
 
 ## Yang harus diverifikasi di run pertama (spike)
 
