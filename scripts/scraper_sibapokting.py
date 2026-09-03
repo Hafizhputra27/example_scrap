@@ -32,7 +32,7 @@ session.headers.update({
 
 def get_initial_state():
     """Ambil halaman awal untuk dapat CSRF token dan Livewire snapshot."""
-    resp = session.get(f"{BASE_URL}/harian", timeout=(10, 60))
+    resp = session.get(f"{BASE_URL}/harian", timeout=45)
     resp.raise_for_status()
     page_html = resp.text
 
@@ -65,7 +65,7 @@ def fetch_harga_by_date(csrf_token, snapshot, tanggal_str):
         f"{BASE_URL}/livewire/update",
         json=payload,
         headers={"X-Livewire": "true"},
-        timeout=(10, 60),
+        timeout=45,
     )
     resp.raise_for_status()
     data = resp.json()

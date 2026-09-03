@@ -19,6 +19,7 @@ tidak men-deploy data basi). Cuaca/kurs yang gagal sebagian → warning, lanjut.
 """
 
 import sys
+import time
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -87,50 +88,66 @@ def refresh_harga(sampai: date) -> None:
     print(f"harga: +{len(gabung) - len(lama)} baris, total {len(gabung)} (s/d {max(gabung['tanggal'])})")
 
 
+def _fetch_pasar(nama, lat, lon, mulai: date, sampai: date, chunk=180, retry=3) -> pd.DataFrame:
+    """Fetch cuaca 1 pasar dalam potongan <= `chunk` hari, retry per potongan.
+
+    Open-Meteo archive dari runner CI sering timeout untuk rentang panjang;
+    potongan kecil + retry jauh lebih andal. Raise kalau ada potongan yang
+    tetap gagal setelah semua retry (caller yang putuskan fatal/tidak)."""
+    frames = []
+    cur = mulai
+    while cur <= sampai:
+        end = min(cur + timedelta(days=chunk - 1), sampai)
+        for attempt in range(1, retry + 1):
+            try:
+                frames.append(fetch_weather.fetch_weather_for_pasar(nama, lat, lon, str(cur), str(end)))
+                break
+            except Exception as e:  # noqa: BLE001
+                if attempt == retry:
+                    raise
+                print(f"    {nama} {cur}..{end} gagal ({attempt}/{retry}: {e}); retry…", file=sys.stderr)
+                time.sleep(3 * attempt)
+        cur = end + timedelta(days=1)
+        time.sleep(0.5)
+    return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+
+
 def refresh_cuaca(sampai: date) -> None:
     key = ["tanggal", "pasar"]
-    pasar_all = set(fetch_weather.PASAR_KOORDINAT)
     lama = pd.read_csv(CUACA)
     lama["tanggal"] = _tgl_str(lama["tanggal"])
+    last_per_pasar = lama.groupby("pasar")["tanggal"].max().to_dict()
 
-    hilang = pasar_all - set(lama["pasar"])
-    if hilang:
-        mulai = AWAL  # backfill penuh untuk pasar yang hilang dari CSV
-        print(f"cuaca: {len(hilang)} pasar hilang {sorted(hilang)} — backfill penuh dari {AWAL}")
-    else:
-        # tanggal terkecil di antara "last date" tiap pasar → fetch dari situ + 1
-        terakhir = date.fromisoformat(lama.groupby("pasar")["tanggal"].max().min())
-        mulai = terakhir + timedelta(days=1)
+    frames, gagal = [], []
+    for nama, (lat, lon) in fetch_weather.PASAR_KOORDINAT.items():
+        last = last_per_pasar.get(nama)
+        mulai = AWAL if last is None else date.fromisoformat(last) + timedelta(days=1)
+        if mulai > sampai:
+            continue
+        tag = "backfill" if last is None else "incr"
+        print(f"cuaca [{tag}] {nama}: {mulai}..{sampai}")
+        try:
+            df = _fetch_pasar(nama, lat, lon, mulai, sampai)
+            if not df.empty:
+                frames.append(df)
+        except Exception as e:  # noqa: BLE001
+            gagal.append(nama)
+            print(f"cuaca: {nama} GAGAL total ({e}) — history lama dipertahankan", file=sys.stderr)
 
-    if mulai > sampai:
-        print("cuaca: sudah terkini")
+    if not frames:
+        msg = "cuaca: tidak ada data baru"
+        if gagal:
+            msg += f" | PERINGATAN gagal: {gagal}"
+        print(msg, file=sys.stderr if gagal else sys.stdout)
         return
 
-    print(f"cuaca: fetch {mulai}..{sampai}")
-    tmp = CUACA.with_name("_cuaca_baru.csv")
-    tmp.unlink(missing_ok=True)
-    try:
-        fetch_weather.fetch_all_pasar(str(mulai), str(sampai), output_path=tmp)
-    except ValueError:
-        print("cuaca: semua pasar gagal fetch — pertahankan data lama", file=sys.stderr)
-        return
-
-    if not tmp.exists():
-        print("cuaca: tidak ada file baru — pertahankan data lama", file=sys.stderr)
-        return
-
-    baru = pd.read_csv(tmp)
-    tmp.unlink()
+    baru = pd.concat(frames, ignore_index=True)
     baru["tanggal"] = _tgl_str(baru["tanggal"])
     gabung = _merge(lama, baru, key)
     gabung.to_csv(CUACA, index=False)
-
-    n_pasar_baru = baru["pasar"].nunique()
-    if n_pasar_baru < 9:
-        hilang = sorted(set(lama["pasar"]) - set(baru["pasar"]))
-        print(f"cuaca: PERINGATAN — {n_pasar_baru}/9 pasar ter-fetch, tertinggal: {hilang} "
-              f"(history lama dipertahankan, akan menyusul run berikutnya)", file=sys.stderr)
-    print(f"cuaca: +{len(gabung) - len(lama)} baris, total {len(gabung)}")
+    tail = f" | PERINGATAN gagal (menyusul run berikutnya): {gagal}" if gagal else ""
+    print(f"cuaca: +{len(gabung) - len(lama)} baris, total {len(gabung)}, "
+          f"{gabung['pasar'].nunique()}/9 pasar{tail}")
 
 
 def refresh_kurs(sampai: date) -> None:
