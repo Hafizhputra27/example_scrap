@@ -44,12 +44,13 @@ cron harian 06:00 WIB (Sen–Sab)          cron mingguan 05:00 WIB (Minggu)
    - Expiry: 1 tahun (set reminder untuk regenerate)
 2. **Simpan sebagai secret** di repo ini: Settings → Secrets and variables → Actions →
    New repository secret → nama `DASHBOARD_PUSH_TOKEN`, value = PAT tadi.
-3. Merge branch `auto-refresh`.
+3. Merge branch `auto-refresh` (aman — cron masih non-aktif, cuma tombol manual).
 4. **Uji manual:** Actions → "refresh harian" → Run workflow. Cek:
    - langkah "Refresh sumber data" sukses (berapa baris baru)
    - `run_pipeline.sh --cepat` sukses, catat **durasi** (untuk kalibrasi timeout)
    - commit muncul di `patani-dashboard` → Vercel deploy → situs `Data s/d <tanggal baru>`
-5. Kalau OK, biarkan cron jalan sendiri.
+5. **Aktifkan cron:** setelah run manual sukses, edit kedua `.github/workflows/refresh-*.yml`
+   — hapus tanda `#` pada blok `schedule:` / `cron:` (lihat komentar di file), commit.
 
 ## Yang harus diverifikasi di run pertama (spike)
 

@@ -1,10 +1,11 @@
 name: refresh harian
 
 on:
-  schedule:
-    # 23:00 UTC Min–Jum  ->  06:00 WIB Sen–Sab (SIBAPOKTING tak update Minggu)
-    - cron: "0 23 * * 0-5"
   workflow_dispatch:
+  # Aktifkan cron SETELAH secret DASHBOARD_PUSH_TOKEN diset & 1x "Run workflow" sukses.
+  # Hapus tanda # di 2 baris di bawah:
+  # schedule:
+  #   - cron: "0 23 * * 0-5"   # 23:00 UTC Min–Jum = 06:00 WIB Sen–Sab
 
 concurrency:
   group: refresh
