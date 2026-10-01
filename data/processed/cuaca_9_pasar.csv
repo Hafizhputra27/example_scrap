@@ -6887,6 +6887,7 @@ tanggal,pasar,curah_hujan_mm,suhu_avg,suhu_max,suhu_min
 2026-09-26,Pasar Baleendah,1.4,26.2,33.3,20.1
 2026-09-26,Pasar Banjaran,1.4,25.6,32.8,19.6
 2026-09-26,Pasar Baru Majalaya,1.3,24.9,31.7,19.5
+2026-09-26,Pasar Cileunyi,2.1,24.0,30.0,19.4
 2026-09-26,Pasar Ciwidey,2.3,21.0,27.9,16.3
 2026-09-26,Pasar Margahayu,4.2,25.1,32.3,19.7
 2026-09-26,Pasar Sehat Cicalengka,2.2,23.8,30.6,18.9
@@ -6895,6 +6896,7 @@ tanggal,pasar,curah_hujan_mm,suhu_avg,suhu_max,suhu_min
 2026-09-27,Pasar Baleendah,0.9,25.3,30.9,20.0
 2026-09-27,Pasar Banjaran,0.9,24.8,30.4,19.5
 2026-09-27,Pasar Baru Majalaya,3.7,24.4,30.0,19.7
+2026-09-27,Pasar Cileunyi,8.1,23.7,29.2,19.8
 2026-09-27,Pasar Ciwidey,6.7,20.6,27.3,15.3
 2026-09-27,Pasar Margahayu,0.9,24.4,30.8,18.9
 2026-09-27,Pasar Sehat Cicalengka,6.3,23.4,29.2,19.0
@@ -6903,6 +6905,7 @@ tanggal,pasar,curah_hujan_mm,suhu_avg,suhu_max,suhu_min
 2026-09-28,Pasar Baleendah,0.9,26.4,34.2,19.5
 2026-09-28,Pasar Banjaran,0.9,25.9,33.6,19.0
 2026-09-28,Pasar Baru Majalaya,1.8,24.9,32.1,19.5
+2026-09-28,Pasar Cileunyi,3.1,24.1,30.7,19.7
 2026-09-28,Pasar Ciwidey,1.0,21.7,29.8,14.8
 2026-09-28,Pasar Margahayu,0.9,25.5,33.5,18.5
 2026-09-28,Pasar Sehat Cicalengka,3.4,23.8,31.2,19.0
@@ -6911,8 +6914,17 @@ tanggal,pasar,curah_hujan_mm,suhu_avg,suhu_max,suhu_min
 2026-09-29,Pasar Baleendah,1.8,26.6,34.6,21.1
 2026-09-29,Pasar Banjaran,1.8,26.1,34.1,20.5
 2026-09-29,Pasar Baru Majalaya,2.3,25.2,32.3,20.7
+2026-09-29,Pasar Cileunyi,4.6,24.3,30.7,20.2
 2026-09-29,Pasar Ciwidey,1.6,21.8,29.1,16.9
 2026-09-29,Pasar Margahayu,2.3,25.4,33.1,19.9
 2026-09-29,Pasar Sehat Cicalengka,4.0,24.0,31.3,19.8
 2026-09-29,Pasar Sehat Soreang,2.3,24.6,32.2,19.0
 2026-09-29,Pasar Stasiun Majalaya,2.3,25.2,32.3,20.7
+2026-09-30,Pasar Baleendah,2.2,25.6,32.9,21.4
+2026-09-30,Pasar Baru Majalaya,10.0,24.2,30.9,20.7
+2026-09-30,Pasar Cileunyi,5.7,23.8,30.0,20.2
+2026-09-30,Pasar Ciwidey,4.3,21.3,27.9,17.3
+2026-09-30,Pasar Margahayu,2.6,24.9,32.0,20.6
+2026-09-30,Pasar Sehat Cicalengka,7.7,23.5,30.4,20.0
+2026-09-30,Pasar Sehat Soreang,2.6,24.1,31.1,19.7
+2026-09-30,Pasar Stasiun Majalaya,10.0,24.2,30.9,20.7
