@@ -6939,6 +6939,7 @@ tanggal,pasar,curah_hujan_mm,suhu_avg,suhu_max,suhu_min
 2026-10-01,Pasar Sehat Soreang,0.4,24.8,31.7,20.1
 2026-10-01,Pasar Stasiun Majalaya,0.9,24.5,30.7,20.3
 2026-10-02,Pasar Baleendah,0.8,27.1,34.5,21.7
+2026-10-02,Pasar Banjaran,0.8,26.6,34.0,21.2
 2026-10-02,Pasar Baru Majalaya,0.9,24.9,31.8,19.1
 2026-10-02,Pasar Cileunyi,1.8,24.5,31.1,19.5
 2026-10-02,Pasar Ciwidey,2.4,22.3,28.9,19.2
@@ -6947,6 +6948,7 @@ tanggal,pasar,curah_hujan_mm,suhu_avg,suhu_max,suhu_min
 2026-10-02,Pasar Sehat Soreang,3.6,25.3,32.0,21.2
 2026-10-02,Pasar Stasiun Majalaya,0.9,24.9,31.8,19.1
 2026-10-03,Pasar Baleendah,0.0,27.0,33.6,20.3
+2026-10-03,Pasar Banjaran,0.0,26.5,33.1,19.7
 2026-10-03,Pasar Baru Majalaya,0.3,24.4,30.7,18.1
 2026-10-03,Pasar Cileunyi,1.2,23.8,29.9,17.8
 2026-10-03,Pasar Ciwidey,0.0,22.1,28.3,17.3
@@ -6955,6 +6957,7 @@ tanggal,pasar,curah_hujan_mm,suhu_avg,suhu_max,suhu_min
 2026-10-03,Pasar Sehat Soreang,0.0,25.4,31.2,19.4
 2026-10-03,Pasar Stasiun Majalaya,0.3,24.4,30.7,18.1
 2026-10-04,Pasar Baleendah,1.8,26.4,33.2,20.3
+2026-10-04,Pasar Banjaran,1.8,25.9,32.7,19.7
 2026-10-04,Pasar Baru Majalaya,5.7,24.4,31.3,18.7
 2026-10-04,Pasar Cileunyi,4.6,23.8,29.8,18.8
 2026-10-04,Pasar Ciwidey,1.6,21.6,28.4,15.8
@@ -6963,6 +6966,7 @@ tanggal,pasar,curah_hujan_mm,suhu_avg,suhu_max,suhu_min
 2026-10-04,Pasar Sehat Soreang,3.8,24.6,31.4,18.7
 2026-10-04,Pasar Stasiun Majalaya,5.7,24.4,31.3,18.7
 2026-10-05,Pasar Baleendah,0.2,27.0,33.2,20.9
+2026-10-05,Pasar Banjaran,0.2,26.5,32.7,20.3
 2026-10-05,Pasar Baru Majalaya,0.5,25.0,31.4,18.7
 2026-10-05,Pasar Cileunyi,1.5,24.3,30.5,18.8
 2026-10-05,Pasar Ciwidey,1.5,21.3,27.5,16.3
@@ -6970,3 +6974,11 @@ tanggal,pasar,curah_hujan_mm,suhu_avg,suhu_max,suhu_min
 2026-10-05,Pasar Sehat Cicalengka,0.8,24.0,30.9,18.1
 2026-10-05,Pasar Sehat Soreang,1.0,24.9,31.3,19.2
 2026-10-05,Pasar Stasiun Majalaya,0.5,25.0,31.4,18.7
+2026-10-06,Pasar Baleendah,0.0,28.3,36.2,20.5
+2026-10-06,Pasar Banjaran,0.0,27.7,35.7,20.0
+2026-10-06,Pasar Baru Majalaya,0.0,25.7,34.4,18.4
+2026-10-06,Pasar Cileunyi,0.0,24.9,32.6,18.5
+2026-10-06,Pasar Ciwidey,0.0,22.4,30.0,16.1
+2026-10-06,Pasar Margahayu,0.0,27.2,35.0,20.2
+2026-10-06,Pasar Sehat Cicalengka,0.0,24.1,32.4,17.3
+2026-10-06,Pasar Stasiun Majalaya,0.0,25.7,34.4,18.4
