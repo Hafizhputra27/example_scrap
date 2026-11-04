@@ -7218,6 +7218,7 @@ tanggal,pasar,curah_hujan_mm,suhu_avg,suhu_max,suhu_min
 2026-11-01,Pasar Sehat Soreang,1.5,24.2,30.7,18.8
 2026-11-01,Pasar Stasiun Majalaya,3.6,24.0,31.0,19.0
 2026-11-02,Pasar Baleendah,4.1,25.4,32.1,20.7
+2026-11-02,Pasar Banjaran,4.1,24.9,31.6,20.2
 2026-11-02,Pasar Baru Majalaya,4.5,24.3,30.5,20.1
 2026-11-02,Pasar Cileunyi,6.4,23.8,29.8,19.6
 2026-11-02,Pasar Ciwidey,4.7,21.3,26.7,17.1
@@ -7225,3 +7226,11 @@ tanggal,pasar,curah_hujan_mm,suhu_avg,suhu_max,suhu_min
 2026-11-02,Pasar Sehat Cicalengka,4.7,23.7,30.2,19.6
 2026-11-02,Pasar Sehat Soreang,6.5,24.0,30.0,19.6
 2026-11-02,Pasar Stasiun Majalaya,4.5,24.3,30.5,20.1
+2026-11-03,Pasar Baleendah,0.3,26.0,32.9,20.1
+2026-11-03,Pasar Banjaran,0.3,25.5,32.4,19.5
+2026-11-03,Pasar Baru Majalaya,1.4,24.4,31.0,19.4
+2026-11-03,Pasar Ciwidey,0.5,21.9,28.1,16.6
+2026-11-03,Pasar Margahayu,0.3,25.5,31.8,19.9
+2026-11-03,Pasar Sehat Cicalengka,1.2,23.8,30.5,19.0
+2026-11-03,Pasar Sehat Soreang,0.3,24.6,30.9,19.0
+2026-11-03,Pasar Stasiun Majalaya,1.4,24.4,31.0,19.4
