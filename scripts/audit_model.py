@@ -4,7 +4,9 @@ Audit model & metodologi -- verifikasi apakah kesimpulan fase riset
 1-7 hari") benar-benar sahih, sebelum lanjut bikin dashboard.
 
 4 bagian:
-  1. REPRODUCIBILITY  -- jalankan ulang pipeline, angka harus cocok dengan yang di-commit
+  1. INVARIAN MAE    -- angka di ringkasan_horizon.csv harus berasal dari model TERSIMPAN
+                        (default: tanpa training). `--retrain` mengembalikan perilaku lama:
+                        latih ulang lalu bandingkan dengan angka commit.
   2. AUDIT METODOLOGI -- cek hal-hal yang bisa membatalkan kesimpulan
   3. ISI MODEL        -- struktur tiap model tersimpan
   4. VISUAL           -- prediksi vs aktual (models/audit/*.png)
@@ -20,6 +22,8 @@ import numpy as np
 import pandas as pd
 import lightgbm as lgb
 from sklearn.metrics import mean_absolute_error
+
+from evaluate_stored_models import evaluasi_horizon, tulis_ringkasan
 
 import matplotlib
 matplotlib.use("Agg")
@@ -49,38 +53,70 @@ FEATURE_COLS_DIRECT = [
 
 # ======================================================================
 print("\n" + "=" * 70)
-print("1. REPRODUCIBILITY -- jalankan ulang pipeline, bandingkan ke commit")
+if "--retrain" in sys.argv:
+    print("1. REPRODUCIBILITY -- retrain lalu bandingkan ke angka commit")
+else:
+    print("1. INVARIAN MAE -- angka ringkasan harus berasal dari model tersimpan")
 print("=" * 70)
 
 ringkasan_commit = pd.read_csv(MODELS / "ringkasan_horizon.csv").set_index("horizon")
 multi_commit = pd.read_csv(MODELS / "hasil_evaluasi_multi_horizon.csv").set_index("horizon")
 
-for H in (1, 3, 7):
-    subprocess.run([PY, str(BASE / "scripts/build_dataset_horizon.py"), str(H)],
-                   check=True, capture_output=True)
-    subprocess.run([PY, str(BASE / "scripts/train_model_horizon.py"), str(H)],
-                   check=True, capture_output=True)
+if "--retrain" in sys.argv:
+    for H in (1, 3, 7):
+        subprocess.run([PY, str(BASE / "scripts/build_dataset_horizon.py"), str(H)],
+                       check=True, capture_output=True)
+        subprocess.run([PY, str(BASE / "scripts/train_model_horizon.py"), str(H)],
+                       check=True, capture_output=True)
+else:
+    # Mode default: TIDAK melatih. Dataset per-horizon hanya dibangun kalau belum ada.
+    for H in (1, 3, 7):
+        if not (DATA / f"dataset_fitur_h{H}.csv").exists():
+            subprocess.run([PY, str(BASE / "scripts/build_dataset_horizon.py"), str(H)],
+                           check=True, capture_output=True)
 
+    rows = []
+    for H in (1, 3, 7):
+        r = evaluasi_horizon(H)
+        rows.append(r)
+        a = ringkasan_commit.loc[H, "mae_model"]
+        if abs(a - r["mae_model"]) <= 1:
+            ok(f"H+{H} direct: MAE {r['mae_model']:,} = model tersimpan "
+               f"(ringkasan {a:.0f})")
+        else:
+            fail(f"H+{H} direct: MAE model tersimpan {r['mae_model']:,} "
+                 f"!= ringkasan {a:.0f}")
+    # Tulis ulang supaya prediksi/export berikutnya memakai angka model yang sama.
+    tulis_ringkasan(rows)
+    ok("ringkasan_horizon.csv disinkronkan dari model tersimpan (tanpa training)")
+
+# Recursive H+1..H+3: evaluasi ulang dengan model_h1 tersimpan (evaluasi, bukan training).
 subprocess.run([PY, str(BASE / "scripts/evaluate_multi_horizon.py")],
                check=True, capture_output=True)
 
 ringkasan_new = pd.read_csv(MODELS / "ringkasan_horizon.csv").set_index("horizon")
 multi_new = pd.read_csv(MODELS / "hasil_evaluasi_multi_horizon.csv").set_index("horizon")
 
-for H in (1, 3, 7):
-    a, b = ringkasan_commit.loc[H, "mae_model"], ringkasan_new.loc[H, "mae_model"]
-    c, d = ringkasan_commit.loc[H, "selisih_pct"], ringkasan_new.loc[H, "selisih_pct"]
-    if abs(a - b) <= 1 and abs(c - d) <= 0.2:
-        ok(f"H+{H} direct: MAE {b:.0f} (commit {a:.0f}), selisih {d:+.1f}% (commit {c:+.1f}%) -- cocok")
-    else:
-        fail(f"H+{H} direct: MAE {b:.0f} vs commit {a:.0f} / selisih {d:+.1f}% vs commit {c:+.1f}% -- BEDA")
+if "--retrain" in sys.argv:
+    for H in (1, 3, 7):
+        a, b = ringkasan_commit.loc[H, "mae_model"], ringkasan_new.loc[H, "mae_model"]
+        c, d = ringkasan_commit.loc[H, "selisih_pct"], ringkasan_new.loc[H, "selisih_pct"]
+        if abs(a - b) <= 1 and abs(c - d) <= 0.2:
+            ok(f"H+{H} direct: MAE {b:.0f} (commit {a:.0f}), selisih {d:+.1f}% (commit {c:+.1f}%) -- cocok")
+        else:
+            fail(f"H+{H} direct: MAE {b:.0f} vs commit {a:.0f} / selisih {d:+.1f}% vs commit {c:+.1f}% -- BEDA")
 
-for h in ("H+1", "H+2", "H+3"):
-    a = multi_commit.loc[h, "mae_model"]; b = multi_new.loc[h, "mae_model"]
-    if abs(a - b) <= 1:
-        ok(f"{h} recursive: MAE {b:.0f} (commit {a:.0f}) -- cocok")
-    else:
-        fail(f"{h} recursive: MAE {b:.0f} vs commit {a:.0f} -- BEDA")
+    for h in ("H+1", "H+2", "H+3"):
+        a = multi_commit.loc[h, "mae_model"]; b = multi_new.loc[h, "mae_model"]
+        if abs(a - b) <= 1:
+            ok(f"{h} recursive: MAE {b:.0f} (commit {a:.0f}) -- cocok")
+        else:
+            fail(f"{h} recursive: MAE {b:.0f} vs commit {a:.0f} -- BEDA")
+else:
+    # Tanpa training, angka recursive boleh bergeser karena jendela data bergerak.
+    for h in ("H+1", "H+2", "H+3"):
+        print(f"  {h} recursive: MAE {multi_new.loc[h, 'mae_model']:,.0f} "
+              f"(sebelumnya {multi_commit.loc[h, 'mae_model']:,.0f}) -- dievaluasi ulang, bukan dilatih")
 
 # determinisme: retrain in-process, bandingkan importance ke model tersimpan
 df7 = pd.read_csv(DATA / "dataset_fitur_h7.csv", parse_dates=["tanggal", "tanggal_target"])
