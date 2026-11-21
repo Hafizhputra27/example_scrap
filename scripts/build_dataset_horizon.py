@@ -27,7 +27,9 @@ df = df.sort_values(["pasar", "komoditas", "tanggal"]).reset_index(drop=True)
 df["harga_target"] = df.groupby(["pasar", "komoditas"], observed=True)["harga"].shift(-HORIZON)
 df["tanggal_target"] = df["tanggal"] + pd.Timedelta(days=HORIZON)
 
-lebaran_dates = pd.to_datetime(["2025-03-31", "2026-03-21"])
+# Idul Fitri (SKB 3 Menteri). WAJIB identik dengan feature_engineering.py dan
+# predict_forward.py. Konvensi: POSITIF = sebelum Lebaran (lebaran - tanggal).
+lebaran_dates = pd.to_datetime(["2025-03-31", "2026-03-21", "2027-03-10"])
 
 def hari_ke_lebaran_terdekat(tanggal_series):
     tanggal_arr = tanggal_series.values.astype("datetime64[D]")
