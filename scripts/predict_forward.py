@@ -26,7 +26,9 @@ DATA = BASE / "data" / "processed"
 MODELS = BASE / "models"
 
 HORIZONS = [1, 3, 7]
-LEBARAN = pd.to_datetime(["2025-03-31", "2026-03-21"])
+# Idul Fitri (SKB 3 Menteri). WAJIB identik dengan feature_engineering.py dan
+# build_dataset_horizon.py; dashboard menyalinnya di src/lib/proyeksi.js.
+LEBARAN = pd.to_datetime(["2025-03-31", "2026-03-21", "2027-03-10"])
 
 FEATURE_COLS = [
     "pasar", "komoditas",
@@ -41,7 +43,10 @@ ANCHOR_FEATURES = [c for c in FEATURE_COLS if not c.endswith("_target") and c no
 
 
 def hari_ke_lebaran(tanggal):
-    return min(((tanggal - l).days for l in LEBARAN), key=abs)
+    # KONVENSI: POSITIF = sebelum Lebaran, NEGATIF = sesudah -- sama dengan
+    # build_dataset_horizon.py (lebaran - tanggal). Jangan dibalik: model
+    # tersimpan dilatih dengan konvensi ini.
+    return min(((l - tanggal).days for l in LEBARAN), key=abs)
 
 
 df = pd.read_csv(DATA / "dataset_fitur.csv", parse_dates=["tanggal"])

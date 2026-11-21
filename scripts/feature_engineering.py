@@ -49,12 +49,13 @@ df["hari_dalam_minggu"] = df["tanggal"].dt.dayofweek  # 0=Senin, 6=Minggu
 df["bulan"] = df["tanggal"].dt.month
 df["is_weekend"] = df["hari_dalam_minggu"].isin([5, 6]).astype(int)
 
-# Jarak (hari) ke Lebaran terdekat: negatif = sebelum, positif = sesudah.
-# "bulan" tidak cukup karena Lebaran ikut kalender lunar (geser ~11 hari/tahun).
+# Jarak (hari) ke Lebaran terdekat: POSITIF = sebelum, NEGATIF = sesudah.
+# Konvensi ini dipakai model tersimpan -- predict_forward.py dan
+# build_dataset_horizon.py wajib sama. "bulan" tidak cukup karena Lebaran ikut
+# kalender lunar (geser ~11 hari/tahun).
 # ponytail: hardcode tanggal Idul Fitri versi pemerintah -- update daftar ini kalau
-# rentang data diperluas. Hanya 2 momen dalam data 2024-08..2026-08, jadi sinyal
-# musiman apa pun dari sini = temuan awal, bukan kesimpulan kuat.
-_lebaran = pd.to_datetime(["2025-03-31", "2026-03-21"])
+# rentang data diperluas. Sinyal musiman dari sini = temuan awal, bukan kesimpulan kuat.
+_lebaran = pd.to_datetime(["2025-03-31", "2026-03-21", "2027-03-10"])
 df["hari_ke_lebaran"] = df["tanggal"].apply(
     lambda t: min(((t - l).days for l in _lebaran), key=abs)
 )
