@@ -24,6 +24,9 @@ if [[ "${1:-}" != "--cepat" ]]; then
 else
   echo ">> 2. (dilewati, pakai model tersimpan) -- tetap regenerate dataset horizon"
   for H in 1 3 7; do $PY scripts/build_dataset_horizon.py $H; done
+  # MAE harus dihitung dari model yang benar-benar tersimpan, jangan pakai angka
+  # dari training lama: data sudah bergerak, modelnya tidak.
+  $PY scripts/evaluate_stored_models.py
 fi
 
 echo ">> 3. Evaluasi & rekomendasi"
