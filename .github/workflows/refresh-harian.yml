@@ -53,4 +53,13 @@ jobs:
           git config user.email "pipeline-bot@users.noreply.github.com"
           git add data models dashboard_data
           git diff --cached --quiet || git commit -m "data: refresh harian $(date -u +%F)"
-          git push
+          # main bisa sudah maju selama job berjalan (commit manusia / run lain).
+          # Rebase dulu, jangan biarkan push ditolak dengan pesan git mentah.
+          if ! git pull --rebase --autostash origin main; then
+            echo "::error::rebase ke origin/main gagal — hasil run ini bentrok dengan commit terbaru. Selesaikan konflik manual atau jalankan ulang workflow."
+            exit 1
+          fi
+          if ! git push origin HEAD:main; then
+            echo "::error::push ke main ditolak — remote berubah lagi selama job berjalan. Jalankan ulang workflow; jangan paksa push."
+            exit 1
+          fi
