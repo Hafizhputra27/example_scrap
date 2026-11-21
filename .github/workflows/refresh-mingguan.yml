@@ -55,20 +55,3 @@ jobs:
           git diff --cached --quiet || git commit -m "data+model: refresh mingguan $(date -u +%F)"
           git push
 
-      - name: Push 8 JSON ke patani-dashboard
-        env:
-          TOKEN: ${{ secrets.DASHBOARD_PUSH_TOKEN }}
-        run: |
-          if [ -z "$TOKEN" ]; then
-            echo "::error::secret DASHBOARD_PUSH_TOKEN belum diset — lihat docs/auto-refresh.md"
-            exit 1
-          fi
-          git clone --depth 1 "https://x-access-token:${TOKEN}@github.com/Hafizhputra27/patani-dashboard" dash
-          cp dashboard_data/*.json dash/public/data/
-          cd dash
-          git config user.name  "pipeline-bot"
-          git config user.email "pipeline-bot@users.noreply.github.com"
-          git add public/data
-          git diff --cached --quiet && { echo "tidak ada perubahan JSON — skip"; exit 0; }
-          git commit -m "data: refresh $(date -u +%F) (auto, mingguan)"
-          git push
