@@ -14,8 +14,9 @@ Dipakai oleh .github/workflows/refresh-*.yml. Manual:
     python scripts/refresh_sumber_data.py            # s/d kemarin
     python scripts/refresh_sumber_data.py 2026-09-10 # s/d tanggal tertentu
 
-Exit != 0 hanya kalau scrape HARGA wajib tapi 0 baris (biar workflow gagal keras,
-tidak men-deploy data basi). Cuaca/kurs yang gagal sebagian → warning, lanjut.
+Exit != 0 hanya kalau scrape HARGA wajib tapi 0 baris (atau semua harga kosong karena
+belum terbit) — biar workflow gagal keras, tidak men-deploy data basi. Cuaca/kurs yang
+gagal sebagian → warning, lanjut.
 """
 
 import sys
@@ -37,9 +38,15 @@ AWAL = date(2024, 8, 22)  # awal cakupan data proyek
 
 
 def _sampai() -> date:
+    kemarin = date.today() - timedelta(days=1)  # kemarin (WIB via env TZ di workflow)
     if len(sys.argv) > 1:
-        return date.fromisoformat(sys.argv[1])
-    return date.today() - timedelta(days=1)  # kemarin (WIB via env TZ di workflow)
+        sampai = date.fromisoformat(sys.argv[1])
+        if sampai > kemarin:
+            print(f"PERINGATAN: {sampai} >= hari ini, di-clamp ke {kemarin} "
+                  f"(halaman SIBAPOKTING hari ini belum terbit)", file=sys.stderr)
+            return kemarin
+        return sampai
+    return kemarin
 
 
 def _tgl_str(s: pd.Series) -> pd.Series:
@@ -82,10 +89,14 @@ def refresh_harga(sampai: date) -> None:
     baru["tanggal"] = _tgl_str(baru["tanggal"])
     if baru.empty:
         sys.exit("harga: 0 baris baru dari scraper")
+    if baru["harga"].notna().sum() == 0:
+        sys.exit("harga: 0 harga terisi dari scraper (semua hari belum terbit?) "
+                 "— data mentah tidak diubah")
 
     gabung = _merge(lama, baru, key)
     gabung.to_csv(RAW_HARGA, index=False)
-    print(f"harga: +{len(gabung) - len(lama)} baris, total {len(gabung)} (s/d {max(gabung['tanggal'])})")
+    print(f"harga: +{len(gabung) - len(lama)} baris, total {len(gabung)}, "
+          f"data terakhir {max(gabung['tanggal'])}")
 
 
 def _fetch_pasar(nama, lat, lon, mulai: date, sampai: date, chunk=180, retry=3) -> pd.DataFrame:

@@ -14,6 +14,7 @@ bukan di sandbox Claude, karena sandbox Claude tidak punya akses ke domain ini.
 
 import requests
 import re
+import sys
 import html as html_module
 import pandas as pd
 from io import StringIO
@@ -23,6 +24,8 @@ import time
 
 BASE_URL = "https://sibapokting.bandungkab.go.id"
 RAW = Path(__file__).resolve().parent.parent / "data" / "raw"
+RAW_HARGA = RAW / "harga_sibapokting.csv"
+AWAL_DATA = date(2024, 8, 22)  # awal cakupan data proyek
 
 session = requests.Session()
 session.headers.update({
@@ -95,8 +98,31 @@ def parse_table(html_table, tanggal_str):
     return df_long[["tanggal", "pasar", "komoditas", "harga"]]
 
 
-def scrape_range(start_date, end_date, delay_seconds=1.5, save_every=10, output_path=RAW / "harga_sibapokting.csv"):
-    """Scrape rentang tanggal, simpan progresif biar aman kalau terputus di tengah jalan."""
+def terakhir_di_raw(path=RAW_HARGA):
+    """Tanggal terakhir yang sudah ada di CSV mentah (None kalau file belum ada)."""
+    if not Path(path).exists():
+        return None
+    tgl = pd.read_csv(path, usecols=["tanggal"])["tanggal"]
+    return date.fromisoformat(str(tgl.max())[:10]) if len(tgl) else None
+
+
+def rentang_scrape(terakhir, hari_ini, arg=None):
+    """Tanggal mulai & akhir scrape.
+
+    Default: hari setelah data terakhir s/d kemarin, supaya menjalankan file ini
+    langsung tidak pernah mengulang rentang mati atau meminta hari yang belum
+    terbit. `arg` (YYYY-MM-DD) menimpa batas akhir.
+    """
+    sampai = date.fromisoformat(arg) if arg else hari_ini - timedelta(days=1)
+    mulai = AWAL_DATA if terakhir is None else terakhir + timedelta(days=1)
+    return mulai, sampai
+
+
+def scrape_range(start_date, end_date, delay_seconds=1.5, save_every=10, output_path=RAW_HARGA):
+    """Scrape rentang tanggal, simpan progresif biar aman kalau terputus di tengah jalan.
+
+    Hari yang belum terbit (0 harga numerik) dilewati, bukan ditulis sebagai baris NaN.
+    """
     csrf_token, snapshot = get_initial_state()
 
     all_data = []
@@ -112,7 +138,12 @@ def scrape_range(start_date, end_date, delay_seconds=1.5, save_every=10, output_
         try:
             html_table = fetch_harga_by_date(csrf_token, snapshot, tanggal_str)
             df = parse_table(html_table, tanggal_str)
-            all_data.append(df)
+            terisi = int(df["harga"].notna().sum())
+            if terisi == 0:
+                print(f"  {tanggal_str}: belum terbit (0 harga) — dilewati")
+            else:
+                all_data.append(df)
+                print(f"  {tanggal_str}: {terisi} harga")
         except Exception as e:
             print(f"  Gagal ambil {tanggal_str}: {e}")
 
@@ -124,15 +155,51 @@ def scrape_range(start_date, end_date, delay_seconds=1.5, save_every=10, output_
         current += timedelta(days=1)
         time.sleep(delay_seconds)  # jeda sopan ke server
 
+    if not all_data:
+        raise ValueError(f"tidak ada hari terbit di {start_date}..{end_date}")
     final_df = pd.concat(all_data, ignore_index=True)
     final_df.to_csv(output_path, index=False)
     print(f"\nSelesai. Total baris: {len(final_df)}. Disimpan ke {output_path}")
     return final_df
 
 
-if __name__ == "__main__":
-    start = date(2024, 8, 22)
-    end = date(2026, 8, 22)
+def jalankan_manual(arg=None, hari_ini=None):
+    """Scrape incremental untuk pemakaian langsung (`python3 scripts/scraper_sibapokting.py`).
 
-    df = scrape_range(start, end)
-    print(df.head(20))
+    Hasil di-merge ke CSV mentah, bukan menimpa: `scrape_range` sendiri hanya
+    menulis rentang yang di-scrape.
+    """
+    hari_ini = hari_ini or date.today()
+    terakhir = terakhir_di_raw()
+    mulai, sampai = rentang_scrape(terakhir, hari_ini, arg)
+    print(f"range: {mulai}..{sampai} (data mentah terakhir: {terakhir or 'belum ada'})")
+    if mulai > sampai:
+        print("tidak ada tanggal baru untuk di-scrape")
+        return None
+
+    tmp = RAW_HARGA.with_name("_harga_scrape_manual.csv")
+    tmp.unlink(missing_ok=True)
+    df = scrape_range(mulai, sampai, output_path=tmp)
+
+    lama = pd.read_csv(RAW_HARGA) if RAW_HARGA.exists() else pd.DataFrame(columns=df.columns)
+    gabung = (
+        pd.concat([lama, df], ignore_index=True)
+        .drop_duplicates(subset=["tanggal", "pasar", "komoditas"], keep="last")
+        .sort_values(["tanggal", "pasar", "komoditas"])
+        .reset_index(drop=True)
+    )
+    gabung.to_csv(RAW_HARGA, index=False)
+    tmp.unlink(missing_ok=True)
+    print(f"manual: +{len(gabung) - len(lama)} baris, total {len(gabung)}, "
+          f"data terakhir {max(gabung['tanggal'])}")
+    return gabung
+
+
+if __name__ == "__main__":
+    try:
+        df = jalankan_manual(sys.argv[1] if len(sys.argv) > 1 else None)
+    except ValueError as e:
+        sys.exit(f"scrape: {e} (tidak ada yang ditulis)")
+    if df is not None:
+        print(df.head(20))
+
