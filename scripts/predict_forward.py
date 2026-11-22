@@ -36,17 +36,29 @@ FEATURE_COLS = [
     "harga_rolling7_mean", "harga_rolling7_std", "harga_rolling14_mean",
     "curah_hujan_mm", "suhu_avg", "suhu_max", "suhu_min",
     "curah_hujan_7hr", "curah_hujan_14hr",
-    "kurs_usd_idr", "kurs_lag7",
-    "hari_dalam_minggu_target", "bulan_target", "is_weekend_target", "hari_ke_lebaran_target",
+    "kurs_ret_7", "kurs_ret_30",
+    "hari_dalam_minggu_target", "bulan_target", "is_weekend_target",
+    "is_lebaran_window_target", "hari_sejak_lebaran_target",
 ]
 ANCHOR_FEATURES = [c for c in FEATURE_COLS if not c.endswith("_target") and c not in ("pasar", "komoditas")]
 
 
-def hari_ke_lebaran(tanggal):
-    # KONVENSI: POSITIF = sebelum Lebaran, NEGATIF = sesudah -- sama dengan
-    # build_dataset_horizon.py (lebaran - tanggal). Jangan dibalik: model
-    # tersimpan dilatih dengan konvensi ini.
-    return min(((l - tanggal).days for l in LEBARAN), key=abs)
+def fitur_kalender_target(tgl_target):
+    """Fitur kalender yang bisa dihitung di muka untuk tanggal target.
+    Konvensi tunggal: hari_sejak_lebaran = hari sejak Lebaran terakhir (cap 90),
+    is_lebaran_window = |jarak ke Lebaran terdekat| <= 30."""
+    sejak = np.full(len(tgl_target), 90, dtype=int)
+    for l in LEBARAN:
+        d = (tgl_target - l).dt.days.to_numpy()
+        sejak = np.where((d >= 0) & (d < sejak), d, sejak)
+    jarak = np.min(np.abs(np.stack([(tgl_target - l).dt.days.to_numpy() for l in LEBARAN])), axis=0)
+    return pd.DataFrame({
+        "hari_dalam_minggu_target": tgl_target.dt.dayofweek.to_numpy(),
+        "bulan_target": tgl_target.dt.month.to_numpy(),
+        "is_weekend_target": tgl_target.dt.dayofweek.isin([5, 6]).astype(int).to_numpy(),
+        "is_lebaran_window_target": (jarak <= 30).astype(int),
+        "hari_sejak_lebaran_target": sejak,
+    }, index=tgl_target.index)
 
 
 df = pd.read_csv(DATA / "dataset_fitur.csv", parse_dates=["tanggal"])
@@ -71,10 +83,9 @@ for h in HORIZONS:
     X = anchor[ANCHOR_FEATURES].copy()
     X.insert(0, "komoditas", anchor["komoditas"].values)
     X.insert(0, "pasar", anchor["pasar"].values)
-    X["hari_dalam_minggu_target"] = tgl_target.dt.dayofweek.values
-    X["bulan_target"] = tgl_target.dt.month.values
-    X["is_weekend_target"] = tgl_target.dt.dayofweek.isin([5, 6]).astype(int).values
-    X["hari_ke_lebaran_target"] = [hari_ke_lebaran(t) for t in tgl_target]
+    kal = fitur_kalender_target(tgl_target)
+    for kol in kal.columns:
+        X[kol] = kal[kol].to_numpy()
     X = X[FEATURE_COLS]
 
     delta = models[h].predict(X)

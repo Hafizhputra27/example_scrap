@@ -43,6 +43,21 @@ df["bulan_target"] = df["tanggal_target"].dt.month
 df["is_weekend_target"] = df["hari_dalam_minggu_target"].isin([5, 6]).astype(int)
 df["hari_ke_lebaran_target"] = hari_ke_lebaran_terdekat(df["tanggal_target"])
 
+# Fitur event-window untuk model (kolom bertanda hanya untuk band/riset).
+# Konvensi tunggal: hari_sejak_lebaran = hari sejak Lebaran terakhir, di-cap 90;
+# is_lebaran_window = 1 bila |jarak ke Lebaran terdekat| <= 30.
+def hari_sejak_lebaran(tanggal_series):
+    t = tanggal_series.values.astype("datetime64[D]")
+    sejak = np.full(len(t), 90, dtype=int)
+    for l in lebaran_dates.values.astype("datetime64[D]"):
+        d = (t - l).astype(int)
+        sejak = np.where((d >= 0) & (d < sejak), d, sejak)
+    return sejak
+
+
+df["hari_sejak_lebaran_target"] = hari_sejak_lebaran(df["tanggal_target"])
+df["is_lebaran_window_target"] = (np.abs(df["hari_ke_lebaran_target"]) <= 30).astype(int)
+
 df["baseline_hN"] = df["harga"]  # persistence: harga H hari ke depan = harga hari ini
 
 # ponytail: shift(-H) = H baris ke depan, bukan H hari kalender. Grid harian

@@ -55,9 +55,9 @@ feature_cols = [
     "harga_rolling7_mean", "harga_rolling7_std", "harga_rolling14_mean",
     "curah_hujan_mm", "suhu_avg", "suhu_max", "suhu_min",
     "curah_hujan_7hr", "curah_hujan_14hr",
-    "kurs_usd_idr", "kurs_lag7",
+    "kurs_ret_7", "kurs_ret_30",
     "hari_dalam_minggu", "bulan", "is_weekend",
-    "hari_ke_lebaran",
+    "is_lebaran_window", "hari_sejak_lebaran",
 ]
 target_col = "arah"
 
