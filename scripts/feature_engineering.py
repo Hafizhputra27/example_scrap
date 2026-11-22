@@ -56,23 +56,9 @@ df["is_weekend"] = df["hari_dalam_minggu"].isin([5, 6]).astype(int)
 # ponytail: hardcode tanggal Idul Fitri versi pemerintah -- update daftar ini kalau
 # rentang data diperluas. Sinyal musiman dari sini = temuan awal, bukan kesimpulan kuat.
 _lebaran = pd.to_datetime(["2025-03-31", "2026-03-21", "2027-03-10"])
-
-
-def _kalender_lebaran(t):
-    """(jarak_terdekat_bertanda, hari_sejak_lebaran_di_cap_90, di_dalam_window_30)."""
-    jarak = min(((l - t).days for l in _lebaran), key=abs)
-    sejak = min((t - l).days for l in _lebaran if t >= l) if t >= _lebaran.min() else 90
-    return jarak, min(sejak, 90), int(abs(jarak) <= 30)
-
-
-_kal = df["tanggal"].apply(_kalender_lebaran)
-df["hari_ke_lebaran"] = [k[0] for k in _kal]
-# Dua fitur event-window menggantikan jarak bertanda sebagai fitur model: nilai
-# bertanda lompat ~354 hari saat Lebaran terdekat berganti (argmin), dan itu
-# bertindak sebagai indeks waktu, bukan sinyal. Kolom `hari_ke_lebaran` tetap
-# ada untuk skrip riset/band.
-df["hari_sejak_lebaran"] = [k[1] for k in _kal]
-df["is_lebaran_window"] = [k[2] for k in _kal]
+df["hari_ke_lebaran"] = df["tanggal"].apply(
+    lambda t: min(((t - l).days for l in _lebaran), key=abs)
+)
 
 # --- 4. Curah hujan kumulatif (per pasar, bukan per komoditas -- cuaca sama untuk semua sayur) ---
 df["curah_hujan_7hr"] = df.groupby("pasar")["curah_hujan_mm"].transform(
@@ -82,17 +68,10 @@ df["curah_hujan_14hr"] = df.groupby("pasar")["curah_hujan_mm"].transform(
     lambda x: x.rolling(window=14, min_periods=1).sum()
 )
 
-# --- 5. Kurs: retur, bukan level ---
-# Level kurs hampir monoton dalam waktu (dan di luar rentang training, tree tidak
-# bisa mengekstrapolasi), jadi level & lag-nya bertindak sebagai indeks waktu.
-# Yang dipakai model: retur 7/30 hari (stasioner). `kurs_lag7` tetap ada untuk
-# skrip riset lama, tidak masuk fitur model.
+# --- 5. Lag kurs (kurs sama untuk semua baris di tanggal yang sama, jadi cukup di-shift per tanggal unik) ---
 kurs_unik = df[["tanggal", "kurs_usd_idr"]].drop_duplicates().sort_values("tanggal")
 kurs_unik["kurs_lag7"] = kurs_unik["kurs_usd_idr"].shift(7)
-kurs_unik["kurs_ret_7"] = kurs_unik["kurs_usd_idr"].pct_change(7)
-kurs_unik["kurs_ret_30"] = kurs_unik["kurs_usd_idr"].pct_change(30)
-df = df.merge(kurs_unik[["tanggal", "kurs_lag7", "kurs_ret_7", "kurs_ret_30"]],
-              on="tanggal", how="left")
+df = df.merge(kurs_unik[["tanggal", "kurs_lag7"]], on="tanggal", how="left")
 
 print("Shape setelah tambah fitur:", df.shape)
 print("\nKolom yang ada sekarang:")

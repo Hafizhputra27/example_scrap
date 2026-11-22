@@ -33,9 +33,8 @@ feature_cols = [
     "harga_rolling7_mean", "harga_rolling7_std", "harga_rolling14_mean",
     "curah_hujan_mm", "suhu_avg", "suhu_max", "suhu_min",
     "curah_hujan_7hr", "curah_hujan_14hr",
-    "kurs_ret_7", "kurs_ret_30",
-    "hari_dalam_minggu_target", "bulan_target", "is_weekend_target",
-    "is_lebaran_window_target", "hari_sejak_lebaran_target",
+    "kurs_usd_idr", "kurs_lag7",
+    "hari_dalam_minggu_target", "bulan_target", "is_weekend_target", "hari_ke_lebaran_target",
 ]
 
 tanggal_cutoff = df["tanggal_target"].max() - pd.Timedelta(days=60)

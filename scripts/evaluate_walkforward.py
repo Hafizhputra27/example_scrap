@@ -69,11 +69,23 @@ def muat_data(varian):
     df = df.sort_values(["pasar", "komoditas", "tanggal"]).reset_index(drop=True)
     for kol in ("pasar", "komoditas"):
         df[kol] = df[kol].astype("category")
+    if varian != "baseline":
+        df = _tambah_kurs_l1(df)
+        df = _kalender_l1(df, "tanggal", "")
     fitur = {"baseline": FEATURES_BASELINE, "l1": FEATURES_L1,
              "l2": FEATURES_L1}[varian]
     fitur_target = {"baseline": FEATURES_TARGET_BASELINE,
                     "l1": FEATURES_TARGET_L1, "l2": FEATURES_TARGET_L1}[varian]
     return df, fitur, fitur_target
+
+
+def _tambah_kurs_l1(df):
+    """Retur kurs 7/30 hari, dihitung di harness supaya eksperimen ini tidak
+    mengubah skrip produksi. Level kurs bertindak sebagai indeks waktu."""
+    kurs = df[["tanggal", "kurs_usd_idr"]].drop_duplicates().sort_values("tanggal")
+    kurs["kurs_ret_7"] = kurs["kurs_usd_idr"].pct_change(7)
+    kurs["kurs_ret_30"] = kurs["kurs_usd_idr"].pct_change(30)
+    return df.merge(kurs[["tanggal", "kurs_ret_7", "kurs_ret_30"]], on="tanggal", how="left")
 
 
 LEBARAN = pd.to_datetime(["2025-03-31", "2026-03-21", "2027-03-10"])
@@ -283,17 +295,28 @@ def ringkas(df):
     return agg
 
 
+def jalankan_varian(varian):
+    df, fitur, fitur_target = muat_data(varian)
+    rows = []
+    jalankan_direct(df, fitur, fitur_target, varian, rows)
+    jalankan_recursive(df, fitur, varian, rows)
+    return pd.DataFrame(rows)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--varian", default="baseline", choices=["baseline", "l1", "l2"])
+    ap.add_argument("--semua", action="store_true",
+                    help="jalankan baseline+l1+l2 dan tulis satu CSV (dipakai di PR)")
     ap.add_argument("--out", default=str(MODELS / "hasil_evaluasi_walkforward.csv"))
     args = ap.parse_args()
 
-    df, fitur, fitur_target = muat_data(args.varian)
-    rows = []
-    jalankan_direct(df, fitur, fitur_target, args.varian, rows)
-    jalankan_recursive(df, fitur, args.varian, rows)
-    hasil = pd.DataFrame(rows)
+    if args.semua:
+        hasil = pd.concat([jalankan_varian(v) for v in ("baseline", "l1", "l2")],
+                          ignore_index=True)
+    else:
+        hasil = jalankan_varian(args.varian)
+    hasil = hasil.sort_values(["varian", "jalur", "horizon", "fold"]).reset_index(drop=True)
     hasil.to_csv(args.out, index=False)
     print(f"Disimpan ke {args.out} ({len(hasil)} baris)")
     ringkas(hasil)

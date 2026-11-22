@@ -47,9 +47,9 @@ feature_cols = [
     "harga_rolling7_mean", "harga_rolling7_std", "harga_rolling14_mean",
     "curah_hujan_mm", "suhu_avg", "suhu_max", "suhu_min",
     "curah_hujan_7hr", "curah_hujan_14hr",
-    "kurs_ret_7", "kurs_ret_30",
+    "kurs_usd_idr", "kurs_lag7",
     "hari_dalam_minggu", "bulan", "is_weekend",
-    "is_lebaran_window", "hari_sejak_lebaran",
+    "hari_ke_lebaran",
 ]
 target_col = "target_delta"
 

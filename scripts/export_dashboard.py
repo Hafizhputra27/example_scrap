@@ -128,9 +128,8 @@ FEAT = [
     "pasar", "komoditas", "harga_lag1", "harga_lag7", "harga_lag14",
     "harga_rolling7_mean", "harga_rolling7_std", "harga_rolling14_mean",
     "curah_hujan_mm", "suhu_avg", "suhu_max", "suhu_min",
-    "curah_hujan_7hr", "curah_hujan_14hr", "kurs_ret_7", "kurs_ret_30",
-    "hari_dalam_minggu_target", "bulan_target", "is_weekend_target",
-    "is_lebaran_window_target", "hari_sejak_lebaran_target",
+    "curah_hujan_7hr", "curah_hujan_14hr", "kurs_usd_idr", "kurs_lag7",
+    "hari_dalam_minggu_target", "bulan_target", "is_weekend_target", "hari_ke_lebaran_target",
 ]
 cut = h7["tanggal_target"].max() - pd.Timedelta(days=60)
 test = h7[h7["tanggal_target"] > cut].copy()
