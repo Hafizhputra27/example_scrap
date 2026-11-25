@@ -12,16 +12,20 @@ Yang dijaga:
   override argv.
 - `refresh_harga` berhenti non-zero kalau frame baru 0 harga terisi.
 - `_sampai` tidak pernah meminta tanggal hari ini atau ke depan.
+- Request awal scraper: 5xx/526 diulang lalu lanjut, 4xx tidak diulang, dan
+  5xx terus = gagal keras dengan URL + status di pesan.
 """
 
 import contextlib
 import io
+import subprocess
 import sys
 import tempfile
 from datetime import date, timedelta
 from pathlib import Path
 
 import pandas as pd
+import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -161,6 +165,9 @@ def test_sampai_tidak_meminta_masa_depan() -> None:
 
 def test_jalankan_manual_menambah_bukan_menimpa() -> None:
     scraper.get_initial_state = lambda: ("csrf", "snapshot")
+    # Default arg `terakhir_di_raw(path=RAW_HARGA)` diikat saat import, jadi patch
+    # fungsi ini langsung; kalau tidak, test bergantung umur data di repo.
+    scraper.terakhir_di_raw = lambda _path=None: date(2026, 11, 19)
     scraper.fetch_harga_by_date = lambda _c, _s, tgl: html_tabel(
         [("CABE RAWIT MERAH", "Rp. 60.000" if tgl == "2026-11-20" else "-")]
     )
@@ -187,7 +194,141 @@ def test_jalankan_manual_menambah_bukan_menimpa() -> None:
         assert not (Path(tmp) / "_harga_scrape_manual.csv").exists()
 
 
+HALAMAN_AWAL = (
+    '<meta name="csrf-token" content="tok-uji">'
+    '<div wire:snapshot="snap-uji"></div>'
+)
+
+
+class RespPalsu:
+    def __init__(self, status_code: int, text: str = "", payload=None):
+        self.status_code = status_code
+        self.text = text
+        self._payload = payload
+
+    def raise_for_status(self) -> None:
+        if self.status_code >= 400:
+            raise requests.HTTPError(f"HTTP {self.status_code}")
+
+    def json(self):
+        return self._payload
+
+
+class SesiPalsu:
+    """Ganti `scraper.session`: kembalikan respons berurutan, catat panggilan."""
+
+    def __init__(self, respons: list):
+        self.respons = list(respons)
+        self.panggilan: list[tuple[str, str]] = []
+
+    def request(self, method: str, url: str, **_kwargs):
+        self.panggilan.append((method, url))
+        item = self.respons.pop(0) if len(self.respons) > 1 else self.respons[0]
+        if isinstance(item, Exception):
+            raise item
+        return item
+
+
+@contextlib.contextmanager
+def tanpa_tidur():
+    asli = scraper.time.sleep
+    scraper.time.sleep = lambda _detik: None
+    try:
+        yield
+    finally:
+        scraper.time.sleep = asli
+
+
+def test_retry_526_lalu_200() -> None:
+    sesi = SesiPalsu([RespPalsu(526), RespPalsu(200, HALAMAN_AWAL)])
+    asli_sesi, asli_percobaan = scraper.session, scraper.PERCOBAAN_MAKS
+    scraper.session = sesi
+    try:
+        with tanpa_tidur(), contextlib.redirect_stderr(io.StringIO()) as err:
+            assert scraper.get_initial_state() == ("tok-uji", "snap-uji")
+    finally:
+        scraper.session, scraper.PERCOBAAN_MAKS = asli_sesi, asli_percobaan
+
+    assert len(sesi.panggilan) == 2, sesi.panggilan
+    assert "526" in err.getvalue() and "/harian" in err.getvalue(), err.getvalue()
+
+    # POST livewire ikut diulang, bukan cuma GET halaman awal.
+    sesi = SesiPalsu([
+        RespPalsu(503),
+        RespPalsu(200, payload={"components": [{"effects": {"html": "<table></table>"}}]}),
+    ])
+    scraper.session = sesi
+    try:
+        with tanpa_tidur(), contextlib.redirect_stderr(io.StringIO()):
+            assert scraper.fetch_harga_by_date("tok", "snap", "2026-11-23") == "<table></table>"
+    finally:
+        scraper.session = asli_sesi
+    assert [p[0] for p in sesi.panggilan] == ["POST", "POST"], sesi.panggilan
+
+
+def test_4xx_tidak_diulang() -> None:
+    sesi = SesiPalsu([RespPalsu(404)])
+    asli_sesi = scraper.session
+    scraper.session = sesi
+    try:
+        with tanpa_tidur(), contextlib.redirect_stderr(io.StringIO()):
+            scraper.get_initial_state()
+    except requests.HTTPError:
+        pass
+    else:
+        raise AssertionError("404 harus melempar HTTPError")
+    finally:
+        scraper.session = asli_sesi
+    assert len(sesi.panggilan) == 1, f"4xx tidak boleh diulang: {sesi.panggilan}"
+
+
+def test_retry_526_terus_gagal_keras() -> None:
+    sesi = SesiPalsu([RespPalsu(526)])
+    asli_sesi = scraper.session
+    scraper.session = sesi
+    try:
+        with tanpa_tidur(), contextlib.redirect_stderr(io.StringIO()):
+            scraper.get_initial_state()
+    except RuntimeError as e:
+        pesan = str(e)
+    else:
+        raise AssertionError("526 terus harus RuntimeError, bukan lanjut")
+    finally:
+        scraper.session = asli_sesi
+    assert "/harian" in pesan and "526" in pesan, pesan
+    assert len(sesi.panggilan) == scraper.PERCOBAAN_MAKS, sesi.panggilan
+
+    # Proses harus keluar non-zero dengan pesan yang sama (bukan traceback tanpa konteks).
+    kode = (
+        "import sys\n"
+        "sys.path.insert(0, '.')\n"
+        "import scraper_sibapokting as s\n"
+        "class R:\n"
+        "    status_code = 526\n"
+        "    text = ''\n"
+        "    def raise_for_status(self): pass\n"
+        "class S:\n"
+        "    def request(self, *a, **k): return R()\n"
+        "s.session = S()\n"
+        "s.time.sleep = lambda _d: None\n"
+        "s.get_initial_state()\n"
+    )
+    hasil = subprocess.run(
+        [sys.executable, "-c", kode],
+        cwd=Path(__file__).resolve().parent,
+        capture_output=True,
+        text=True,
+    )
+    assert hasil.returncode != 0, hasil
+    assert "/harian" in hasil.stderr and "526" in hasil.stderr, hasil.stderr
+
+
 def main() -> None:
+    # Retry dites lebih dulu: test lain mengganti `get_initial_state`/`fetch_harga_by_date`
+    # dengan lambda dan tidak mengembalikannya.
+    test_retry_526_lalu_200()
+    test_4xx_tidak_diulang()
+    test_retry_526_terus_gagal_keras()
     test_parse_table_kosong()
     test_rentang_scrape()
     test_scrape_range_lewati_belum_terbit()
