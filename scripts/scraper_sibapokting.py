@@ -33,10 +33,38 @@ session.headers.update({
 })
 
 
+PERCOBAAN_MAKS = 3
+JEDA_RETRY_AWAL = 2.0  # detik; berlipat dua tiap percobaan (2 s, 4 s)
+
+
+def _request_dengan_retry(method, url, **kwargs):
+    """Request dengan retry pada gangguan sesaat: 5xx (termasuk 526 Cloudflare) dan timeout.
+
+    4xx tidak diulang: itu jawaban pasti server, bukan gangguan sesaat.
+    """
+    for percobaan in range(1, PERCOBAAN_MAKS + 1):
+        try:
+            resp = session.request(method, url, **kwargs)
+        except (requests.ConnectionError, requests.Timeout) as e:
+            galat = f"{type(e).__name__}: {e}"
+        else:
+            if resp.status_code < 500:
+                resp.raise_for_status()
+                return resp
+            galat = f"HTTP {resp.status_code}"
+        if percobaan == PERCOBAAN_MAKS:
+            raise RuntimeError(
+                f"gagal {method} {url} setelah {PERCOBAAN_MAKS} percobaan: {galat}"
+            ) from None
+        jeda = JEDA_RETRY_AWAL * (2 ** (percobaan - 1))
+        print(f"  {method} {url} -> {galat}; ulangi dalam {jeda:.0f} s "
+              f"({percobaan}/{PERCOBAAN_MAKS})", file=sys.stderr)
+        time.sleep(jeda)
+
+
 def get_initial_state():
     """Ambil halaman awal untuk dapat CSRF token dan Livewire snapshot."""
-    resp = session.get(f"{BASE_URL}/harian", timeout=45)
-    resp.raise_for_status()
+    resp = _request_dengan_retry("GET", f"{BASE_URL}/harian", timeout=45)
     page_html = resp.text
 
     csrf_match = re.search(r'name="csrf-token" content="([^"]+)"', page_html)
@@ -64,13 +92,13 @@ def fetch_harga_by_date(csrf_token, snapshot, tanggal_str):
             }
         ],
     }
-    resp = session.post(
+    resp = _request_dengan_retry(
+        "POST",
         f"{BASE_URL}/livewire/update",
         json=payload,
         headers={"X-Livewire": "true"},
         timeout=45,
     )
-    resp.raise_for_status()
     data = resp.json()
     html_table = data["components"][0]["effects"]["html"]
     return html_table
